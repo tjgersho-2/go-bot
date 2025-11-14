@@ -1,7 +1,7 @@
 [project]
 name = "jira-clarifier-backend"
 version = "0.1.0"
-description = ""
+description = "FastAPI backend for Jira Clarifier"
 authors = [
     {name = "tjgersho",email = "tjgersho@gmail.com"}
 ]
