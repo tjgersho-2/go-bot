@@ -1,26 +1,29 @@
 modules:
   jira:issuePanel:
-    - key: jira-clarifier-panel
-      title: AI Clarifier
-      icon: https://developer.atlassian.com/platform/forge/images/issue-panel-icon.svg
-      render: main
+    - key: jira-clarifier-forge-issue-panel
+      resource: main
       resolver:
-        function: resolver
+        function: clarifier-resolver
+      render: native
+      title: AI Clarifier
+      icon: https://developer.atlassian.com/platform/forge/images/icons/issue-panel-icon.svg
   function:
-    - key: resolver
-      handler: resolver.handler
-
+    - key: clarifier-resolver
+      handler: index.handler
+resources:
+  - key: main
+    path: src/frontend/index.jsx
 app:
-  id: ari:cloud:ecosystem::app/your-app-id-here
-
+  runtime:
+    name: nodejs22.x
+    memoryMB: 256
+    architecture: arm64
+  id: ari:cloud:ecosystem::app/bada8dda-801f-4a83-84eb-efd1800033a0
 permissions:
   scopes:
-    - read:jira-work
     - write:jira-work
+    - read:jira-work
   external:
     fetch:
       backend:
-        - 'https://jira-clarifier.up.railway.app'
-        - 'https://api.anthropic.com'
-      client:
-        - 'https://jira-clarifier.up.railway.app'
+        - address: jira-clarifier-production.up.railway.app

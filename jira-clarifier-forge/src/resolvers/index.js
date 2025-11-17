@@ -1,69 +1,32 @@
-import api, { route, fetch } from '@forge/api';
 import Resolver from '@forge/resolver';
 
 const resolver = new Resolver();
 
-/**
- * Fetch issue data from Jira
- */
-const getIssueData = async (issueKey) => {
-  try {
-    const response = await api.asApp().requestJira(
-      route`/rest/api/3/issue/${issueKey}`,
-      {
-        headers: {
-          'Accept': 'application/json'
-        }
-      }
-    );
-
+resolver.define('getText', async (req) => {
+  console.log(req);
+  try{
+    const response = await fetch('https://jira-clarifier-production.up.railway.app/health');
+    console.log("Reponse..");
+    console.log(response);
     if (!response.ok) {
-      throw new Error(`Failed to fetch issue: ${response.status}`);
+      throw new Error(`API request failed: ${response.status}`);
     }
 
-    const issue = await response.json();
-    
-    return {
-      title: issue.fields.summary,
-      description: extractDescription(issue.fields.description),
-      issueType: issue.fields.issuetype?.name,
-      priority: issue.fields.priority?.name,
-      status: issue.fields.status?.name
-    };
+    const data = await response.json();
+    return data;
   } catch (error) {
-    console.error('Error fetching issue:', error);
+    console.error('Error calling clarification API:', error);
     throw error;
   }
-};
+});
 
-/**
- * Extract plain text from Jira's Atlassian Document Format (ADF)
- */
-const extractDescription = (description) => {
-  if (!description) return '';
-  
-  let text = '';
-  
-  const traverse = (node) => {
-    if (node.type === 'text') {
-      text += node.text + ' ';
-    }
-    
-    if (node.content) {
-      node.content.forEach(traverse);
-    }
-  };
-  
-  traverse(description);
-  return text.trim();
-};
-
+ 
 /**
  * Call the AI clarification service
  */
 const callClarificationAPI = async (issueData) => {
   try {
-    const response = await fetch('https://jira-clarifier.up.railway.app/clarify', {
+    const response = await fetch('https://jira-clarifier-production.up.railway.app/clarify', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -75,7 +38,8 @@ const callClarificationAPI = async (issueData) => {
         priority: issueData.priority
       })
     });
-
+    console.log("Reponse..");
+    console.log(response);
     if (!response.ok) {
       throw new Error(`API request failed: ${response.status}`);
     }
@@ -163,8 +127,8 @@ const updateIssueDescription = async (issueKey, clarifiedData) => {
   };
 
   try {
-    const response = await api.asApp().requestJira(
-      route`/rest/api/3/issue/${issueKey}`,
+    const response = await requestJira(
+     `/rest/api/3/issue/${issueKey}`,
       {
         method: 'PUT',
         headers: {
@@ -193,16 +157,11 @@ const updateIssueDescription = async (issueKey, clarifiedData) => {
 /**
  * Resolver function for clarifying an issue
  */
-resolver.define('clarifyIssue', async ({ payload }) => {
-  const { issueKey } = payload;
-  
+resolver.define('clarifyIssue', async ( payload ) => {
+  const { issueData } = payload;
   try {
-    // Fetch issue data
-    const issueData = await getIssueData(issueKey);
-    
     // Call AI service
     const clarifiedData = await callClarificationAPI(issueData);
-    
     return clarifiedData;
   } catch (error) {
     console.error('Error in clarifyIssue resolver:', error);

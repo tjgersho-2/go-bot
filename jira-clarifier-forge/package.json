@@ -1,28 +1,20 @@
 {
-  "name": "jira_clarifier_forge",
-  "version": "1.0.0",
-  "description": "",
-  "license": "ISC",
-  "author": "",
-  "type": "commonjs",
+  "name": "jira-issue-panel-ui-kit",
+  "version": "1.1.26",
   "main": "index.js",
+  "license": "MIT",
+  "private": true,
   "scripts": {
-    "dev": "forge tunnel",
-    "deploy": "forge deploy",
-    "install": "forge install"
-  },
-  "keywords": [
-    "jira",
-    "forge",
-    "ai",
-    "clarity"
-  ],
-  "dependencies": {
-    "@forge/api": "^6.2.0",
-    "@forge/resolver": "^1.7.1",
-    "@forge/ui": "^1.11.4"
+    "lint": "eslint src/**/*"
   },
   "devDependencies": {
-    "@forge/cli": "^6.0.0"
+    "eslint": "^8.56.0",
+    "eslint-plugin-react-hooks": "^4.6.0"
+  },
+  "dependencies": {
+    "@forge/bridge": "5.8.0",
+    "@forge/react": "11.7.0",
+    "@forge/resolver": "1.7.1",
+    "react": "^18.2.0"
   }
 }
