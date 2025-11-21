@@ -9,7 +9,11 @@ import ForgeReconciler, {
     Stack,
     Box,
     ButtonGroup,
-    SectionMessage
+    SectionMessage,
+    Form,
+    TextField,
+    Modal,
+    ModalTransition
  } from '@forge/react';
 // requestJira calls the Jira REST API
 import { requestJira, invoke } from '@forge/bridge';
@@ -22,7 +26,15 @@ const App = () => {
     const [isAnalyzing, setAnalyzing] = useState(false);
     const [isLoading, setLoading] = useState(false);
     const [error, setError] = useState(null);
-    const [issueDetails, setIssueDetails] = useState(null)
+    const [issueDetails, setIssueDetails] = useState(null);
+    const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
+    
+    // Access key state
+    const [isKeyModalOpen, setKeyModalOpen] = useState(false);
+    const [accessKey, setAccessKey] = useState('');
+    const [orgId, setOrgId] = useState(null);
+    const [plan, setPlan] = useState('free');
+    const [isValidatingKey, setValidatingKey] = useState(false);
     
     const extractDescription = (description) => {
         if (!description) return '';
@@ -165,12 +177,60 @@ const App = () => {
       }
     };
 
+    const validateAccessKey = async (key) => {
+        setValidatingKey(true);
+        setError(null);
+        
+        try {
+            const result = await invoke('validateAccessKey', { accessKey: key });
+            
+            if (result.valid) {
+                setOrgId(result.orgId);
+                setPlan(result.plan);
+                setKeyModalOpen(false);
+                setError(null);
+                return true;
+            } else {
+                setError(result.message || 'Invalid access key');
+                return false;
+            }
+        } catch (err) {
+            console.error('Key validation error:', err);
+            setError('Failed to validate access key. Please try again.');
+            return false;
+        } finally {
+            setValidatingKey(false);
+        }
+    };
+
+    const handleKeySubmit = async () => {
+        if (!accessKey || accessKey.trim() === '') {
+            setError('Please enter an access key');
+            return;
+        }
+        
+        await validateAccessKey(accessKey.trim().toUpperCase());
+    };
+
     const clarifyTicket = async (ctx) => {
+        // Check if user has access
+        if (!orgId) {
+            setKeyModalOpen(true);
+            setError('Please enter your access key to use this feature');
+            return;
+        }
+        
         if(issueDetails){
             setAnalyzing(true);
             setError(null);
+            setFeedbackSubmitted(false);
+            
             try {
-                const result = await invoke('clarifyIssue', { issueData: issueDetails });
+                const result = await invoke('clarifyIssue', { 
+                    issueData: issueDetails,
+                    orgId: orgId 
+                });
+                
                 if (result.error) {
                   setError(result.error);
                 } else {
@@ -180,18 +240,33 @@ const App = () => {
                 console.error('Invoke error:', err);
                 setError('Failed to clarify ticket. Please try again.');
             } finally {
-                // CRITICAL: Always reset loading state
                 setAnalyzing(false);
             }
+        }
+    };
+
+    const submitFeedback = async (feedbackType) => {
+        if (!clarifiedData || !issueDetails) return;
+        
+        try {
+            await invoke('submitFeedback', {
+                ticketData: issueDetails,
+                clarifiedOutput: clarifiedData,
+                feedbackType: feedbackType,
+                orgId: orgId || 'unknown'
+            });
+            
+            setFeedbackSubmitted(true);
+        } catch (err) {
+            console.error('Feedback error:', err);
         }
     };
 
     const applyToTicket = async () => {
         setLoading(true);
         try {
-          const issueKey = context?.extension.issue.id;
-          const res = await updateIssueDescription(issueKey,  clarifiedData);
-          // Show success message
+          const issueId = context?.extension.issue.id;
+          const res = await updateIssueDescription(issueId, clarifiedData);
           setClarifiedData({ ...clarifiedData, applied: true });
         } catch (err) {
           setError(`Failed to apply changes. Please try again. ${err}`);
@@ -205,6 +280,7 @@ const App = () => {
       setLoading(false);
       setAnalyzing(false);
       setError(null);
+      setFeedbackSubmitted(false);
       const issueId = context?.extension.issue.id;
       getIssueData(issueId).then(setIssueDetails);
     }
@@ -257,6 +333,25 @@ const App = () => {
               ))}
             </Box>
           ):<></>}
+
+          {/* Feedback buttons */}
+          {!feedbackSubmitted && !applied ? (
+            <Box>
+              <Text><Em>Was this helpful?</Em></Text>
+              <ButtonGroup>
+                <Button onClick={() => submitFeedback('upvote')}>
+                  👍 Yes
+                </Button>
+                <Button onClick={() => submitFeedback('downvote')}>
+                  👎 No
+                </Button>
+              </ButtonGroup>
+            </Box>
+          ) : feedbackSubmitted ? (
+            <SectionMessage appearance="confirmation">
+              <Text>Thank you for your feedback!</Text>
+            </SectionMessage>
+          ) : <></>}
   
         </Box>
       );
@@ -297,8 +392,15 @@ const App = () => {
       return (
       <Box>
         {jsx}
+        {/* Show access key link if no org */}
+        {!orgId ? (
+          <Button onClick={() => setKeyModalOpen(true)} appearance="link">
+            Enter Access Key
+          </Button>
+        ) : (
+          <Text><Em>Plan: {plan}</Em></Text>
+        )}
       </Box>);
-
     }
 
  React.useEffect(() => {
@@ -317,6 +419,55 @@ const App = () => {
           <Em>Transform vague tickets into crystal-clear scope with acceptance criteria.</Em>
         </Text>
       </Stack>
+
+      {/* Access Key Modal */}
+      <ModalTransition>
+        {isKeyModalOpen && (
+          <Modal onClose={() => setKeyModalOpen(false)}>
+            <Box>
+              <Heading size="medium">Enter Access Key</Heading>
+              <Text>
+                <Em>Enter your license key to unlock AI clarification features.</Em>
+              </Text>
+              
+              <Form onSubmit={handleKeySubmit}>
+                <TextField 
+                  name="accessKey"
+                  label="Access Key"
+                  placeholder="JIRA-XXXX-XXXX-XXXX"
+                  value={accessKey}
+                  onChange={(value) => setAccessKey(value)}
+                />
+                
+                <ButtonGroup>
+                  <Button 
+                    type="submit" 
+                    appearance="primary"
+                    isDisabled={isValidatingKey}
+                  >
+                    {isValidatingKey ? 'Validating...' : 'Validate Key'}
+                  </Button>
+                  <Button onClick={() => setKeyModalOpen(false)}>
+                    Cancel
+                  </Button>
+                </ButtonGroup>
+              </Form>
+              
+              <Text>
+                <Em>
+                  Don't have a key? 
+                  <Button appearance="link" onClick={() => {
+                    // TODO: Open Stripe checkout or pricing page
+                    console.log('Purchase key');
+                  }}>
+                    Purchase here
+                  </Button>
+                </Em>
+              </Text>
+            </Box>
+          </Modal>
+        )}
+      </ModalTransition>
     
     {error ? 
         (  

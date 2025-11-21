@@ -4,12 +4,14 @@ import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle2, ArrowRight, Shield, Zap, Users, Star, Sparkles } from 'lucide-react';
+import { CheckCircle2, ArrowRight, Shield, Zap, Users, Star, Sparkles, TrendingUp } from 'lucide-react';
 import { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 
 export default function CheckoutPage() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState<string | null>(null);
   
   const preSelectedPlan = searchParams.get('plan') || 'pro';
@@ -20,120 +22,109 @@ export default function CheckoutPage() {
       name: 'Free',
       price: 0,
       period: '/month',
+      clarifications: 5,
       description: 'Try Jira Clarifier',
       features: [
         '5 clarifications per month',
         'Basic acceptance criteria',
         'Edge cases detection',
-        'Community support'
+        'Community support',
+        'Perfect for trying it out'
       ],
       cta: 'Start Free',
       highlight: false,
       priceId: null,
-      popular: false
+      popular: false,
+      color: 'from-slate-600 to-slate-700'
     },
     {
       id: 'pro',
       name: 'Pro',
-      price: 29,
-      period: ' one-time',
+      price: 5,
+      period: '/month',
+      clarifications: 100,
       description: 'Perfect for individual developers',
       features: [
-        'Unlimited clarifications',
+        '100 clarifications per month',
         'Advanced AI analysis',
         'Test scenarios generation',
         'Success metrics tracking',
         'Priority email support',
-        '1-year license key'
+        'Export to Markdown'
       ],
-      cta: 'Get Pro - $29',
+      cta: 'Get Pro',
       highlight: true,
-      priceId: process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID,
-      popular: true
+      priceId: "price_1SW1moRU6Di3TZwT442hMmUr",
+      popular: true,
+      color: 'from-indigo-600 to-purple-600'
     },
     {
       id: 'team',
       name: 'Team',
-      price: 79,
-      period: ' one-time',
+      price: 30,
+      period: '/month',
+      clarifications: 1000,
       description: 'For growing engineering teams',
       features: [
+        '1,000 clarifications per month',
         'Everything in Pro',
-        'Up to 10 team members',
         'Team analytics dashboard',
         'Custom AI training',
         'Slack integration',
-        '1-year team license'
+        'Dedicated support channel'
       ],
-      cta: 'Get Team - $79',
+      cta: 'Get Team',
       highlight: false,
-      priceId: process.env.NEXT_PUBLIC_STRIPE_TEAM_PRICE_ID,
-      popular: false
+      priceId: "price_1SW1nYRU6Di3TZwTgaZ6uGvE",
+      popular: false,
+      color: 'from-purple-600 to-pink-600'
     },
     {
       id: 'enterprise',
       name: 'Enterprise',
       price: null,
       period: '',
+      clarifications: null,
       description: 'Custom solutions for large orgs',
       features: [
+        'Unlimited clarifications',
         'Everything in Team',
-        'Unlimited team members',
         'SSO & SCIM provisioning',
         'SOC2, GDPR compliance',
-        'Dedicated support'
+        'Dedicated account manager',
+        'Custom integrations'
       ],
       cta: 'Contact Sales',
       highlight: false,
       priceId: null,
-      popular: false
+      popular: false,
+      color: 'from-pink-600 to-red-600'
     }
   ];
 
   const handleCheckout = async (planId: string, priceId: string | null) => {
+    // Handle free plan
+    if (planId === 'free') {
+      window.location.href = 'https://developer.atlassian.com/console/install/bada8dda-801f-4a83-84eb-efd1800033a0?signature=AYABeAT71EgvXekiKwmJpduqx%2B0AAAADAAdhd3Mta21zAEthcm46YXdzOmttczp1cy13ZXN0LTI6NzA5NTg3ODM1MjQzOmtleS83MDVlZDY3MC1mNTdjLTQxYjUtOWY5Yi1lM2YyZGNjMTQ2ZTcAuAECAQB4IOp8r3eKNYw8z2v%2FEq3%2FfvrZguoGsXpNSaDveR%2FF%2Fo0BUN4ZU97WKKMDQ7ILu2MAVQAAAH4wfAYJKoZIhvcNAQcGoG8wbQIBADBoBgkqhkiG9w0BBwEwHgYJYIZIAWUDBAEuMBEEDA0a%2FMQZHjpdqBuAYAIBEIA7oUEjNpdWL355lFAgOBgQq7E3vbz%2B1nlrmFkv80L9ldIGSWu%2FozfcLcY%2FW8vKjVYddM8eyvF8K4kyrSwAB2F3cy1rbXMAS2Fybjphd3M6a21zOmV1LXdlc3QtMTo3MDk1ODc4MzUyNDM6a2V5LzQ2MzBjZTZiLTAwYzMtNGRlMi04NzdiLTYyN2UyMDYwZTVjYwC4AQICAHijmwVTMt6Oj3F%2B0%2B0cVrojrS8yZ9ktpdfDxqPMSIkvHAGNU02wXE2IAHx%2FsaqvbriCAAAAfjB8BgkqhkiG9w0BBwagbzBtAgEAMGgGCSqGSIb3DQEHATAeBglghkgBZQMEAS4wEQQMcfGVT1jB1SZz59MnAgEQgDvLI35N086g6pTvEMblitvsEqH3NgcM7fNSVQMPHxz4QdaczmIZVXNeq6ugkOyzBAlR%2FECsscbUelOTngAHYXdzLWttcwBLYXJuOmF3czprbXM6dXMtZWFzdC0xOjcwOTU4NzgzNTI0MzprZXkvNmMxMjBiYTAtNGNkNS00OTg1LWI4MmUtNDBhMDQ5NTJjYzU3ALgBAgIAeLKa7Dfn9BgbXaQmJGrkKztjV4vrreTkqr7wGwhqIYs5ATp%2F%2B5H4nJ2Zj9TVPqz%2BKf0AAAB%2BMHwGCSqGSIb3DQEHBqBvMG0CAQAwaAYJKoZIhvcNAQcBMB4GCWCGSAFlAwQBLjARBAxdd8v4oydTbVovr9cCARCAO5EoRTKqX1DCoCPeJ6ebvVAwATeF5QYiSXPjTLdBh7we8UoEhrCnvFFNsk2Ve0GavqQvp8KRR404DbQiAgAAAAAMAAAQAAAAAAAAAAAAAAAAALiv0kuT%2BKg8OtcV9hZbrGT%2F%2F%2F%2F%2FAAAAAQAAAAAAAAAAAAAAAQAAADJYhTGd2uk6Z1KKOGyDPQ7ptxcdcYQ2dcqHbcnK1pLLxqOJch1qaIXAhKK8hyLt%2FfAMQP9se3UKRXG2uEyfo98YBKU%3D&product=jira';
+      return;
+    }
+    
+    // Handle enterprise
+    if (planId === 'enterprise') {
+      window.location.href = 'mailto:sales@jiraclarifier.com?subject=Enterprise%20Inquiry';
+      return;
+    }
+
+    // Handle paid plans (Pro and Team) - Navigate to payment page
     if (!priceId) {
-      if (planId === 'free') {
-        // For free plan, redirect to install Forge app
-        window.location.href = 'https://developer.atlassian.com/console/install/bada8dda-801f-4a83-84eb-efd1800033a0?signature=...'; // Your Forge install URL
-        return;
-      }
-      if (planId === 'enterprise') {
-        window.location.href = 'mailto:sales@jiraclarifier.com?subject=Enterprise%20Inquiry';
-        return;
-      }
+      alert('Price ID not configured. Please contact support.');
       return;
     }
 
     setIsLoading(planId);
-
-    try {
-      // Call API to create Stripe checkout session
-      const response = await fetch('/api/stripe/create-checkout', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          priceId,
-          planId,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (data.error) {
-        throw new Error(data.error);
-      }
-
-      // Redirect to Stripe Checkout
-      if (data.url) {
-        window.location.href = data.url;
-      }
-    } catch (error) {
-      console.error('Checkout error:', error);
-      alert('Failed to start checkout. Please try again.');
-      setIsLoading(null);
-    }
+    
+    // Navigate to the payment page with the selected plan
+    router.push(`/payment?plan=${planId}`);
   };
 
   return (
@@ -169,7 +160,7 @@ export default function CheckoutPage() {
         >
           <Badge className="mb-6 px-4 py-2 bg-indigo-500/10 border-indigo-500/30 backdrop-blur-sm">
             <Sparkles className="w-3 h-3 mr-1" />
-            Simple, One-Time Payment
+            Simple Monthly Subscriptions
           </Badge>
           
           <h1 className="text-5xl md:text-6xl font-bold text-white mb-6">
@@ -177,7 +168,7 @@ export default function CheckoutPage() {
           </h1>
           
           <p className="text-xl text-slate-300 leading-relaxed">
-            Buy once, use forever. No subscriptions, no recurring charges.
+            Start free, upgrade anytime. Cancel whenever you want.
           </p>
 
           <div className="mt-6 p-4 bg-green-500/10 border border-green-500/30 rounded-lg">
@@ -217,12 +208,19 @@ export default function CheckoutPage() {
                   <h3 className="text-2xl font-bold text-white mb-2">{plan.name}</h3>
                   <p className="text-sm text-slate-400 mb-6">{plan.description}</p>
                   
-                  <div className="mb-8">
+                  <div className="mb-6">
                     {plan.price !== null ? (
-                      <div className="flex items-baseline gap-2">
-                        <span className="text-4xl font-bold text-white">${plan.price}</span>
-                        <span className="text-slate-400">{plan.period}</span>
-                      </div>
+                      <>
+                        <div className="flex items-baseline gap-2">
+                          <span className="text-4xl font-bold text-white">${plan.price}</span>
+                          <span className="text-slate-400">{plan.period}</span>
+                        </div>
+                        {plan.clarifications && (
+                          <p className="text-sm text-indigo-400 mt-2 font-medium">
+                            {plan.clarifications} clarifications/month
+                          </p>
+                        )}
+                      </>
                     ) : (
                       <span className="text-4xl font-bold text-white">Custom</span>
                     )}
@@ -243,15 +241,15 @@ export default function CheckoutPage() {
                   disabled={isLoading === plan.id}
                   className={`w-full h-12 ${
                     plan.highlight 
-                      ? 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700' 
+                      ? `bg-gradient-to-r ${plan.color} hover:opacity-90` 
                       : ''
                   }`}
                   variant={plan.highlight ? 'default' : 'outline'}
                 >
                   {isLoading === plan.id ? (
                     <span className="flex items-center gap-2">
-                      <Zap className="w-4 h-4 animate-spin" />
-                      Processing...
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Loading...
                     </span>
                   ) : (
                     <span className="flex items-center gap-2">
@@ -265,11 +263,68 @@ export default function CheckoutPage() {
           ))}
         </div>
 
+        {/* Comparison Table - keeping your existing table */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6 }}
+          className="max-w-4xl mx-auto mb-16"
+        >
+          <h2 className="text-3xl font-bold text-white text-center mb-8">
+            Plan Comparison
+          </h2>
+          
+          <div className="bg-slate-900/50 border border-slate-800 rounded-2xl overflow-hidden">
+            <table className="w-full">
+              <thead className="bg-slate-800/50">
+                <tr>
+                  <th className="text-left p-4 text-slate-300 font-medium">Feature</th>
+                  <th className="text-center p-4 text-slate-300 font-medium">Free</th>
+                  <th className="text-center p-4 text-indigo-400 font-medium">Pro</th>
+                  <th className="text-center p-4 text-purple-400 font-medium">Team</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800">
+                <tr>
+                  <td className="p-4 text-slate-300">Clarifications/month</td>
+                  <td className="p-4 text-center text-slate-400">5</td>
+                  <td className="p-4 text-center text-white font-medium">100</td>
+                  <td className="p-4 text-center text-white font-medium">1,000</td>
+                </tr>
+                <tr>
+                  <td className="p-4 text-slate-300">AI Analysis</td>
+                  <td className="p-4 text-center"><CheckCircle2 className="w-5 h-5 text-green-400 mx-auto" /></td>
+                  <td className="p-4 text-center"><CheckCircle2 className="w-5 h-5 text-green-400 mx-auto" /></td>
+                  <td className="p-4 text-center"><CheckCircle2 className="w-5 h-5 text-green-400 mx-auto" /></td>
+                </tr>
+                <tr>
+                  <td className="p-4 text-slate-300">Test Scenarios</td>
+                  <td className="p-4 text-center text-slate-600">—</td>
+                  <td className="p-4 text-center"><CheckCircle2 className="w-5 h-5 text-green-400 mx-auto" /></td>
+                  <td className="p-4 text-center"><CheckCircle2 className="w-5 h-5 text-green-400 mx-auto" /></td>
+                </tr>
+                <tr>
+                  <td className="p-4 text-slate-300">Priority Support</td>
+                  <td className="p-4 text-center text-slate-600">—</td>
+                  <td className="p-4 text-center"><CheckCircle2 className="w-5 h-5 text-green-400 mx-auto" /></td>
+                  <td className="p-4 text-center"><CheckCircle2 className="w-5 h-5 text-green-400 mx-auto" /></td>
+                </tr>
+                <tr>
+                  <td className="p-4 text-slate-300">Team Analytics</td>
+                  <td className="p-4 text-center text-slate-600">—</td>
+                  <td className="p-4 text-center text-slate-600">—</td>
+                  <td className="p-4 text-center"><CheckCircle2 className="w-5 h-5 text-green-400 mx-auto" /></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </motion.div>
+
         {/* Trust Signals */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 0.6 }}
+          transition={{ delay: 0.8 }}
           className="text-center max-w-4xl mx-auto"
         >
           <div className="grid md:grid-cols-3 gap-8 mb-12">
@@ -284,9 +339,9 @@ export default function CheckoutPage() {
               <p className="text-sm text-slate-400">Trust Jira Clarifier</p>
             </div>
             <div className="flex flex-col items-center gap-2">
-              <Zap className="w-10 h-10 text-pink-400" />
-              <h4 className="font-semibold text-white">Instant Delivery</h4>
-              <p className="text-sm text-slate-400">Key sent via email</p>
+              <TrendingUp className="w-10 h-10 text-pink-400" />
+              <h4 className="font-semibold text-white">Cancel Anytime</h4>
+              <p className="text-sm text-slate-400">No long-term commitment</p>
             </div>
           </div>
 

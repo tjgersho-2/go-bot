@@ -2,9 +2,15 @@ import Resolver from '@forge/resolver';
 
 const resolver = new Resolver();
 
+// Base API URL - use environment variable or hardcode
+const API_BASE_URL = 'https://jira-clarifier-production.up.railway.app';
+
+/**
+ * Health check resolver (for testing)
+ */
 resolver.define('getText', async (req) => {
   try{
-    const response = await fetch('https://jira-clarifier-production.up.railway.app/health');
+    const response = await fetch(`${API_BASE_URL}/health`);
     if (!response.ok) {
       throw new Error(`API request failed: ${response.status}`);
     }
@@ -19,9 +25,9 @@ resolver.define('getText', async (req) => {
 /**
  * Call the AI clarification service
  */
-const callClarificationAPI = async (issueData) => {
+const callClarificationAPI = async (issueData, orgId) => {
   try {
-    const response = await fetch('https://jira-clarifier-production.up.railway.app/clarify', {
+    const response = await fetch(`${API_BASE_URL}/clarify`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -30,11 +36,14 @@ const callClarificationAPI = async (issueData) => {
         title: issueData.title,
         description: issueData.description,
         issueType: issueData.issueType,
-        priority: issueData.priority
+        priority: issueData.priority,
+        orgId: orgId || 'unknown'
       })
     });
+    
     if (!response.ok) {
-      throw new Error(`API request failed: ${response.status}`);
+      const errorData = await response.json();
+      throw new Error(errorData.error || `API request failed: ${response.status}`);
     }
 
     const data = await response.json();
@@ -47,18 +56,87 @@ const callClarificationAPI = async (issueData) => {
 /**
  * Resolver function for clarifying an issue
  */
-resolver.define('clarifyIssue', async ( { payload } ) => {
-  const { issueData } = payload;
+resolver.define('clarifyIssue', async ({ payload }) => {
+  const { issueData, orgId } = payload;
+  
   try {
-    // Call AI service
-    const clarifiedData = await callClarificationAPI(issueData);
+    // Call AI service with orgId for rate limiting
+    const clarifiedData = await callClarificationAPI(issueData, orgId);
     return clarifiedData;
   } catch (error) {
     return {
-      error: `Failed to clarify ticket. Please try again or contact support. ${error}`
+      error: error.message || 'Failed to clarify ticket. Please try again or contact support.'
     };
   }
 });
 
+/**
+ * Validate access key
+ */
+resolver.define('validateAccessKey', async ({ payload }) => {
+  const { accessKey } = payload;
+  
+  try {
+    const response = await fetch(`${API_BASE_URL}/validate-key`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        accessKey: accessKey
+      })
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Validation failed: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Access key validation error:', error);
+    return {
+      valid: false,
+      message: 'Failed to validate access key. Please try again.'
+    };
+  }
+});
+
+/**
+ * Submit feedback (upvote/downvote)
+ */
+resolver.define('submitFeedback', async ({ payload }) => {
+  const { ticketData, clarifiedOutput, feedbackType, orgId } = payload;
+  
+  try {
+    const response = await fetch(`${API_BASE_URL}/feedback`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        ticketData: ticketData,
+        clarifiedOutput: clarifiedOutput,
+        feedbackType: feedbackType,
+        orgId: orgId,
+        comment: null
+      })
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Feedback submission failed: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Feedback submission error:', error);
+    // Don't throw error for feedback - just log it
+    return {
+      status: 'error',
+      message: 'Failed to submit feedback'
+    };
+  }
+});
 
 export const handler = resolver.getDefinitions();
