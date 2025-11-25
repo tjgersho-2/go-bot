@@ -1093,8 +1093,9 @@ async def validate_license_key(request: Request, key_input: AccessKeyInput):
     """
     client_host = request.client.host
     print(f"Request received from host: {client_host}")
-    
+
     key_code = key_input.accessKey.strip().upper()
+    install = client_host
     
     conn = get_db_connection()
     if not conn:
@@ -1155,18 +1156,18 @@ async def validate_license_key(request: Request, key_input: AccessKeyInput):
         if not key_data['activated_at']:
             cur.execute("""
                 UPDATE license_keys 
-                SET activated_at = NOW(), updated_at = NOW()
+                SET activated_at = NOW(), updated_at = NOW(), install = %s
                 WHERE key_code = %s
-            """, (key_code,))
+            """, (install, key_code,))
             conn.commit()
-            print(f"🎉 License key activated: {key_code}")
+            print(f"🎉 License key activated: {key_code, install}")
         
         # Calculate remaining
         remaining = key_data['clarifications_limit'] - key_data['clarifications_used']
         
         return AccessKeyResponse(
             valid=True,
-            install=key_code,
+            install=install,
             plan=key_data['plan'],
             message="License key validated successfully!",
             clarificationsRemaining=remaining

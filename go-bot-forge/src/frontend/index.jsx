@@ -33,7 +33,7 @@ const App = () => {
     // Access key state
     const [isKeyModalOpen, setKeyModalOpen] = useState(false);
     const [accessKey, setAccessKey] = useState('');
-    const [orgId, setOrgId] = useState(null);
+    const [install, setInstall] = useState(null);
     const [plan, setPlan] = useState('free');
     const [isValidatingKey, setValidatingKey] = useState(false);
     
@@ -42,7 +42,7 @@ const App = () => {
         let text = '';
         const traverse = (node) => {
             if (node.type === 'text') {
-            text += node.text + ' ';
+              text += node.text + ' ';
             }
             
             if (node.content) {
@@ -181,7 +181,7 @@ const App = () => {
     const checkOnAccessKey = async () =>{
         const result = await invoke('getKeyByInstall');
         if (result.valid) {
-            setOrgId(result.orgId);
+            setInstall(result.install);
             setPlan(result.plan);
             setKeyModalOpen(false);
             setAccessKey(result.key);
@@ -200,7 +200,7 @@ const App = () => {
             const result = await invoke('validateAccessKey', { accessKey: key });
             
             if (result.valid) {
-                setOrgId(result.orgId);
+                setInstall(result.install);
                 setPlan(result.plan);
                 setKeyModalOpen(false);
                 setError(null);
@@ -229,7 +229,7 @@ const App = () => {
 
     const clarifyTicket = async (ctx) => {
         // Check if user has access
-        if (!orgId) {
+        if (!install) {
             setKeyModalOpen(true);
             setError('Please enter your access key to use this feature');
             return;
@@ -243,7 +243,7 @@ const App = () => {
             try {
                 const result = await invoke('clarifyIssue', { 
                     issueData: issueDetails,
-                    orgId: orgId 
+                    install: install 
                 });
                 
                 if (result.error) {
@@ -268,7 +268,7 @@ const App = () => {
                 ticketData: issueDetails,
                 clarifiedOutput: clarifiedData,
                 feedbackType: feedbackType,
-                orgId: orgId || 'unknown'
+                install: install || 'unknown'
             });
             
             setFeedbackSubmitted(true);
@@ -406,7 +406,7 @@ const App = () => {
       <Box>
         {jsx}
         {/* Show access key link if no org */}
-        {!orgId ? (
+        {!install ? (
           <Button onClick={() => setKeyModalOpen(true)} appearance="link">
             Enter Access Key
           </Button>
