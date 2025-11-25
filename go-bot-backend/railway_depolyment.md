@@ -28,7 +28,7 @@ cd fastapi-backend
 git init
 git add .
 git commit -m "Initial commit"
-git remote add origin https://github.com/yourusername/jira-clarifier-backend.git
+git remote add origin https://github.com/yourusername/go-bot-backend.git
 git push -u origin main
 ```
 
@@ -58,7 +58,7 @@ ANTHROPIC_API_KEY=sk-ant-your-key-here
 
 1. Go to **"Settings"** tab
 2. Under **"Domains"**, click **"Generate Domain"**
-3. Copy your URL (e.g., `https://jira-clarifier.up.railway.app`)
+3. Copy your URL (e.g., `https://go-bot.up.railway.app`)
 
 #### Step 5: Test Your API
 
@@ -98,7 +98,7 @@ railway init
 
 Choose:
 - **"Create a new project"**
-- Give it a name: `jira-clarifier`
+- Give it a name: `go-bot`
 
 #### Step 4: Add Environment Variable
 

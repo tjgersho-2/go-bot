@@ -180,13 +180,13 @@ function SuccessContent() {
                     <span className="flex-shrink-0 w-6 h-6 bg-indigo-500 rounded-full flex items-center justify-center text-white text-sm font-bold">
                       1
                     </span>
-                    <span>Install Jira Clarifier in your Jira workspace (if not already installed)</span>
+                    <span>Install Go Bot in your Jira workspace (if not already installed)</span>
                   </li>
                   <li className="flex gap-3">
                     <span className="flex-shrink-0 w-6 h-6 bg-indigo-500 rounded-full flex items-center justify-center text-white text-sm font-bold">
                       2
                     </span>
-                    <span>Open any Jira ticket and find the Jira Clarifier panel on the right</span>
+                    <span>Open any Jira ticket and find the Go Bot panel on the right</span>
                   </li>
                   <li className="flex gap-3">
                     <span className="flex-shrink-0 w-6 h-6 bg-indigo-500 rounded-full flex items-center justify-center text-white text-sm font-bold">

@@ -611,7 +611,7 @@ export default function Home() {
 
         <footer className="py-12 border-t border-slate-800 relative z-10">
           <div className="container mx-auto px-4 text-center text-slate-400">
-            <p>© 2025 Jira Clarifier. Made with <span className="text-red-500">♥</span> for better software.</p>
+            <p>© 2025 Go Bot. Made with <span className="text-red-500">♥</span> for better software.</p>
           </div>
         </footer>
       </div>

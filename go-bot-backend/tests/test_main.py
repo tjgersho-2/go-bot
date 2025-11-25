@@ -1,7 +1,7 @@
-# test_main.py - Basic tests for Jira Clarifier API
+# test_main.py - Basic tests for Go Bot API
 import pytest
 from fastapi.testclient import TestClient
-from jira_clarifier_backend.main import app
+from go_bot_backend.main import app
 import os
 
 # Set test environment variables
@@ -19,7 +19,7 @@ def test_root():
     response = client.get("/")
     assert response.status_code == 200
     data = response.json()
-    assert data["service"] == "Jira Clarifier API"
+    assert data["service"] == "Go Bot API"
     assert "version" in data
 
 

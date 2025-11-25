@@ -1,7 +1,7 @@
 [project]
-name = "jira-clarifier-backend"
+name = "go-bot-backend"
 version = "0.1.0"
-description = "FastAPI backend for Jira Clarifier"
+description = "FastAPI backend for Go Bot"
 authors = [
     {name = "tjgersho",email = "tjgersho@gmail.com"}
 ]

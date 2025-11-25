@@ -11,7 +11,7 @@ import ForgeReconciler, {
     ButtonGroup,
     SectionMessage,
     Form,
-    TextField,
+    Textfield,
     Modal,
     ModalTransition
  } from '@forge/react';
@@ -176,6 +176,20 @@ const App = () => {
         throw error;
       }
     };
+
+    const checkOnAccessKey = async () =>{
+        const result = await invoke('getKeyByInstall');
+        if (result.valid) {
+            setOrgId(result.orgId);
+            setPlan(result.plan);
+            setKeyModalOpen(false);
+            setAccessKey(result.key);
+            return result.key;
+        } else {
+            throw 'No Key Found';
+        }
+    }
+
 
     const validateAccessKey = async (key) => {
         setValidatingKey(true);
@@ -370,7 +384,7 @@ const App = () => {
       if(applied){
         jsx = <Button onClick={resetAnalysis}>Reset</Button>
       }else{
-        if(!initial){
+        if(!initial) {
           jsx = <ButtonGroup>
                   <Button 
                     onClick={applyToTicket}
@@ -380,7 +394,7 @@ const App = () => {
                     onClick={clarifyTicket}
                   >Clarify Again</Button>
                 </ButtonGroup>
-        }else{
+        } else {
           jsx = <Button 
                   onClick={clarifyTicket}
                   appearance="primary"
@@ -406,6 +420,7 @@ const App = () => {
  React.useEffect(() => {
    if (context) {
      const issueId = context?.extension.issue.id;
+     checkOnAccessKey().then((key) => validateAccessKey(key));
      getIssueData(issueId).then(setIssueDetails);
    }
  }, [context]);
@@ -424,19 +439,19 @@ const App = () => {
       <ModalTransition>
         {isKeyModalOpen && (
           <Modal onClose={() => setKeyModalOpen(false)}>
-            <Box>
-              <Heading size="medium">Enter Access Key</Heading>
+            <Box padding="space.100">
+              <Heading size="small">Enter Access Key:</Heading>
               <Text>
-                <Em>Enter your license key to unlock AI clarification features.</Em>
+                <Em>Enter your license key to unlock GoBot features.</Em>
               </Text>
-              
+         
               <Form onSubmit={handleKeySubmit}>
-                <TextField 
-                  name="accessKey"
-                  label="Access Key"
-                  placeholder="JIRA-XXXX-XXXX-XXXX"
-                  value={accessKey}
-                  onChange={(value) => setAccessKey(value)}
+                <Textfield 
+                    name="accessKey"
+                    label="Access Key"
+                    placeholder="JIRA-XXXX-XXXX-XXXX"
+                    value={accessKey}
+                    onChange={(e) => {setAccessKey(e.target.value)} }
                 />
                 
                 <ButtonGroup>
@@ -447,23 +462,20 @@ const App = () => {
                   >
                     {isValidatingKey ? 'Validating...' : 'Validate Key'}
                   </Button>
+                  
                   <Button onClick={() => setKeyModalOpen(false)}>
                     Cancel
                   </Button>
                 </ButtonGroup>
+                
               </Form>
               
               <Text>
                 <Em>
-                  Don't have a key? 
-                  <Button appearance="link" onClick={() => {
-                    // TODO: Open Stripe checkout or pricing page
-                    console.log('Purchase key');
-                  }}>
-                    Purchase here
-                  </Button>
-                </Em>
-              </Text>
+                  Don't have a key? </Em> 
+                    Purchase here: https://gobot.ai/checkout
+              </Text>  
+
             </Box>
           </Modal>
         )}

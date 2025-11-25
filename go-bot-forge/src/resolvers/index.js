@@ -3,7 +3,7 @@ import Resolver from '@forge/resolver';
 const resolver = new Resolver();
 
 // Base API URL - use environment variable or hardcode
-const API_BASE_URL = 'https://jira-clarifier-production.up.railway.app';
+const API_BASE_URL = 'https://go-bot-production.up.railway.app';
 
 /**
  * Health check resolver (for testing)
@@ -20,6 +20,30 @@ resolver.define('getText', async (req) => {
   } catch (error) {
     throw error;
   }
+});
+
+
+/**
+ * Health check resolver (for testing)
+ */
+resolver.define('getKeyByInstall', async () => {
+ 
+    const response = await fetch(`${API_BASE_URL}/find-key-by-install`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        install:  window.location.host
+      })
+     }
+    );
+    if (!response.ok) {
+      throw new Error(`API request failed: ${response.status}`);
+    }
+    const data = await response.json();
+    return data;
+   
 });
  
 /**

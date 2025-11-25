@@ -230,7 +230,7 @@ function PaymentPageContent() {
         <div className="container mx-auto px-4 py-6">
           <div className="flex items-center justify-between">
             <a href="/" className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-purple-400">
-              Jira Clarifier
+              Go Bot
             </a>
             <Button 
               variant="ghost" 

@@ -4,7 +4,7 @@ const resolver = new Resolver();
 
 resolver.define('getText', async (req) => {
   try{
-    const response = await fetch('https://jira-clarifier-production.up.railway.app/health');
+    const response = await fetch('https://go-bot-production.up.railway.app/health');
     if (!response.ok) {
       throw new Error(`API request failed: ${response.status}`);
     }
@@ -21,7 +21,7 @@ resolver.define('getText', async (req) => {
  */
 const callClarificationAPI = async (issueData) => {
   try {
-    const response = await fetch('https://jira-clarifier-production.up.railway.app/clarify', {
+    const response = await fetch('https://go-bot-production.up.railway.app/clarify', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

@@ -23,7 +23,7 @@ export default function CheckoutPage() {
       price: 0,
       period: '/month',
       clarifications: 5,
-      description: 'Try Jira Clarifier',
+      description: 'Try Go Bot',
       features: [
         '5 clarifications per month',
         'Basic acceptance criteria',
@@ -141,7 +141,7 @@ export default function CheckoutPage() {
         <div className="container mx-auto px-4 py-6">
           <div className="flex items-center justify-between">
             <a href="/" className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-purple-400">
-              Jira Clarifier
+              Go Bot
             </a>
             <Button variant="ghost" className="text-slate-300" onClick={() => window.location.href = '/'}>
               ← Back
@@ -336,7 +336,7 @@ export default function CheckoutPage() {
             <div className="flex flex-col items-center gap-2">
               <Users className="w-10 h-10 text-purple-400" />
               <h4 className="font-semibold text-white">4,872+ Users</h4>
-              <p className="text-sm text-slate-400">Trust Jira Clarifier</p>
+              <p className="text-sm text-slate-400">Trust Go Bot</p>
             </div>
             <div className="flex flex-col items-center gap-2">
               <TrendingUp className="w-10 h-10 text-pink-400" />
@@ -359,7 +359,7 @@ export default function CheckoutPage() {
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-slate-400 text-sm">
-              © 2025 Jira Clarifier. All rights reserved.
+              © 2025 Go Bot. All rights reserved.
             </p>
             <div className="flex gap-6 text-sm">
               <a href="/terms" className="text-slate-400 hover:text-white transition">Terms</a>

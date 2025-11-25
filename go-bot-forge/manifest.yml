@@ -1,14 +1,14 @@
 modules:
   jira:issuePanel:
-    - key: jira-clarifier-forge-issue-panel
+    - key: go-bot-forge-issue-panel
       resource: main
       resolver:
-        function: clarifier-resolver
+        function: worker-resolver
       render: native
-      title: AI Clarifier
+      title: GoBot
       icon: https://developer.atlassian.com/platform/forge/images/icons/issue-panel-icon.svg
   function:
-    - key: clarifier-resolver
+    - key: worker-resolver
       handler: index.handler
 resources:
   - key: main
@@ -26,4 +26,4 @@ permissions:
   external:
     fetch:
       backend:
-        - address: jira-clarifier-production.up.railway.app
+        - address: go-bot-production.up.railway.app

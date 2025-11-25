@@ -1,4 +1,4 @@
-# main.py - FastAPI Backend for Jira Clarifier
+# main.py - FastAPI Backend for Go Bot
 import os
 import json
 import asyncio
@@ -106,7 +106,7 @@ async def lifespan(app: FastAPI):
         app.state.redis.close()
 
 app = FastAPI(
-    title="Jira Clarifier API",
+    title="Go Bot API",
     description="AI-powered Jira ticket clarification with Claude",
     version="1.0.0",
     lifespan=lifespan
@@ -130,7 +130,7 @@ class TicketInput(BaseModel):
     description: str = Field(default="", description="Jira ticket description")
     issueType: Optional[str] = Field(default="Task", description="Issue type (Bug, Task, Story)")
     priority: Optional[str] = Field(default="Medium", description="Priority level")
-    orgId: Optional[str] = Field(default=None, description="Organization ID for auth")
+    install: Optional[str] = Field(default=None, description="Organization ID for auth")
     userId: Optional[str] = Field(default=None, description="User ID for rate limiting")
 
 class ClarifiedOutput(BaseModel):
@@ -147,41 +147,27 @@ class UsageStats(BaseModel):
     plan: str
     resetDate: Optional[str]
 
-
 class FeedbackInput(BaseModel):
     ticketData: Dict[str, Any]
     clarifiedOutput: Dict[str, Any]
     feedbackType: str = Field(..., description="'upvote' or 'downvote'")
-    orgId: str
+    install: str
     comment: Optional[str] = None
 
 class AccessKeyInput(BaseModel):
     accessKey: str = Field(..., description="License key to validate")
+    install: str
 
 class AccessKeyResponse(BaseModel):
     valid: bool
-    orgId: Optional[str] = None
+    install: Optional[str] = None
     plan: Optional[str] = None
     message: Optional[str] = None
     clarificationsRemaining: Optional[int] = None
-
-class SignupInput(BaseModel):
-    email: str = Field(..., description="User email")
-    password: str = Field(..., description="Password (min 8 chars)")
-    fullName: str = Field(..., description="Full name")
-    organizationName: str = Field(..., description="Organization name")
-    plan: str = Field(default="free", description="Selected plan")
-
-class LoginInput(BaseModel):
-    email: str
-    password: str
-
-class AuthResponse(BaseModel):
-    token: str
-    orgId: str
-    email: str
-    plan: str
-
+ 
+class InstallData(BaseModel):
+    install: str
+ 
 class CreatePaymentIntentInput(BaseModel):
     planId: str = Field(..., description="Plan ID (pro or team)")
 
@@ -213,7 +199,7 @@ def init_database():
         cur.execute("""
             CREATE TABLE IF NOT EXISTS tickets (
                 id SERIAL PRIMARY KEY,
-                org_id VARCHAR(255),
+                install VARCHAR(255),
                 ticket_title TEXT,
                 ticket_description TEXT,
                 issue_type VARCHAR(50),
@@ -231,7 +217,7 @@ def init_database():
         cur.execute("""
             CREATE TABLE IF NOT EXISTS feedback (
                 id SERIAL PRIMARY KEY,
-                org_id VARCHAR(255),
+                install VARCHAR(255),
                 ticket_title TEXT,
                 ticket_description TEXT,
                 clarified_output JSONB,
@@ -284,13 +270,13 @@ def init_database():
 
         
         # Create indexes
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_feedback_org ON feedback(org_id)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_feedback_org ON feedback(install)")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_feedback_type ON feedback(feedback_type)")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_license_keys ON license_keys(key_code)")
 
         # Create indexes
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_org_id ON organizations(org_id)")
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_tickets_org ON tickets(org_id)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_install ON organizations(install)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_tickets_org ON tickets(install)")
         
         conn.commit()
         print("✅ Database initialized")
@@ -307,9 +293,9 @@ if DATABASE_URL:
 # User & Auth Helpers
 # ============================================================================
 
-def increment_usage(org_id: str):
+def increment_usage(install: str):
     """Increment clarification usage counter"""
-    if not DATABASE_URL or not org_id:
+    if not DATABASE_URL or not install:
         return
     
     conn = get_db_connection()
@@ -322,8 +308,8 @@ def increment_usage(org_id: str):
             UPDATE organizations 
             SET clarifications_used = clarifications_used + 1,
                 updated_at = CURRENT_TIMESTAMP
-            WHERE org_id = %s
-        """, (org_id,))
+            WHERE install = %s
+        """, (install,))
         conn.commit()
     except Exception as e:
         print(f"Error incrementing usage: {e}")
@@ -347,7 +333,7 @@ def validate_access_key(key_code: str) -> Optional[Dict]:
         cur.execute("""
             SELECT lk.*, o.plan, o.clarifications_used, o.clarifications_limit
             FROM license_keys lk
-            LEFT JOIN organizations o ON lk.org_id = o.org_id
+            LEFT JOIN organizations o ON lk.install = o.install
             WHERE lk.key_code = %s 
             AND lk.is_active = true
             AND (lk.expires_at IS NULL OR lk.expires_at > NOW())
@@ -360,35 +346,35 @@ def validate_access_key(key_code: str) -> Optional[Dict]:
         
         # If key hasn't been activated yet, create/update org
         if not key_data['activated_at']:
-            org_id = key_data['org_id'] or f"org_{key_code[:8]}"
+            install = key_data['install'] or f"org_{key_code[:8]}"
             
             # Create or update organization
             cur.execute("""
-                INSERT INTO organizations (org_id, plan, clarifications_limit, clarifications_used)
+                INSERT INTO organizations (install, plan, clarifications_limit, clarifications_used)
                 VALUES (%s, %s, %s, 0)
-                ON CONFLICT (org_id) 
+                ON CONFLICT (install) 
                 DO UPDATE SET 
                     plan = EXCLUDED.plan,
                     clarifications_limit = EXCLUDED.clarifications_limit,
                     updated_at = CURRENT_TIMESTAMP
                 RETURNING *
-            """, (org_id, key_data['plan'], RATE_LIMIT_PRO))
+            """, (install, key_data['plan'], RATE_LIMIT_PRO))
             
-            # Update license key with org_id and activation time
+            # Update license key with install and activation time
             cur.execute("""
                 UPDATE license_keys 
-                SET org_id = %s, activated_at = NOW()
+                SET install = %s, activated_at = NOW()
                 WHERE key_code = %s
-            """, (org_id, key_code))
+            """, (install, key_code))
             
             conn.commit()
             
             # Fetch updated org data
-            cur.execute("SELECT * FROM organizations WHERE org_id = %s", (org_id,))
+            cur.execute("SELECT * FROM organizations WHERE install = %s", (install,))
             org_data = cur.fetchone()
         else:
             # Fetch existing org data
-            cur.execute("SELECT * FROM organizations WHERE org_id = %s", (key_data['org_id'],))
+            cur.execute("SELECT * FROM organizations WHERE install = %s", (key_data['install'],))
             org_data = cur.fetchone()
         
         return dict(org_data) if org_data else None
@@ -413,10 +399,10 @@ def store_feedback(feedback: FeedbackInput):
         cur = conn.cursor()
         cur.execute("""
             INSERT INTO feedback 
-            (org_id, ticket_title, ticket_description, clarified_output, feedback_type, comment)
+            (install, ticket_title, ticket_description, clarified_output, feedback_type, comment)
             VALUES (%s, %s, %s, %s, %s, %s)
         """, (
-            feedback.orgId,
+            feedback.install,
             feedback.ticketData.get('title'),
             feedback.ticketData.get('description'),
             json.dumps(feedback.clarifiedOutput),
@@ -424,7 +410,7 @@ def store_feedback(feedback: FeedbackInput):
             feedback.comment
         ))
         conn.commit()
-        print(f"✅ Stored {feedback.feedbackType} feedback from {feedback.orgId}")
+        print(f"✅ Stored {feedback.feedbackType} feedback from {feedback.install}")
     except Exception as e:
         print(f"Error storing feedback: {e}")
     finally:
@@ -495,11 +481,11 @@ def send_license_key_email(email: str, license_key: str, plan_name: str, clarifi
     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     
     To: {email}
-    Subject: Your Jira Clarifier {plan_name} License Key 🎉
+    Subject: Your Go Bot {plan_name} License Key 🎉
     
     Hi there!
     
-    Welcome to Jira Clarifier {plan_name}!
+    Welcome to Go Bot {plan_name}!
     
     ╔══════════════════════════════════════╗
     ║  Your License Key:                   ║
@@ -514,7 +500,7 @@ def send_license_key_email(email: str, license_key: str, plan_name: str, clarifi
     
     🚀 How to Activate (3 easy steps):
     
-    1. Install Jira Clarifier in your Jira workspace
+    1. Install Go Bot in your Jira workspace
     2. Open any Jira ticket
     3. Enter your license key in the panel
     
@@ -525,7 +511,7 @@ def send_license_key_email(email: str, license_key: str, plan_name: str, clarifi
     Need help? Just reply to this email.
     
     Happy clarifying! ✨
-    The Jira Clarifier Team
+    The Go Bot Team
     
     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     """)
@@ -534,7 +520,7 @@ def send_license_key_email(email: str, license_key: str, plan_name: str, clarifi
 # AI Processing
 # ============================================================================
 
-async def get_similar_tickets(description: str, org_id: str) -> List[Dict]:
+async def get_similar_tickets(description: str, install: str) -> List[Dict]:
     """Get similar tickets using RAG (Pinecone)"""
     if not ENABLE_RAG or not hasattr(app.state, 'index'):
         return []
@@ -556,7 +542,7 @@ async def generate_clarification(ticket: TicketInput) -> ClarifiedOutput:
         raise HTTPException(status_code=500, detail="AI service not configured")
     
     # Get similar tickets for context (optional)
-    similar_tickets = await get_similar_tickets(ticket.description, ticket.orgId or "unknown")
+    similar_tickets = await get_similar_tickets(ticket.description, ticket.install or "unknown")
     
     # Build prompt
     prompt = f"""You are a senior software engineer helping to clarify Jira tickets. Given the following ticket information, provide clear, actionable acceptance criteria and additional details.
@@ -643,10 +629,10 @@ def store_ticket(ticket: TicketInput, output: ClarifiedOutput):
         cur = conn.cursor()
         cur.execute("""
             INSERT INTO tickets 
-            (org_id, ticket_title, ticket_description, issue_type, priority, clarified_output, processing_time)
+            (install, ticket_title, ticket_description, issue_type, priority, clarified_output, processing_time)
             VALUES (%s, %s, %s, %s, %s, %s, %s)
         """, (
-            ticket.orgId or 'unknown',
+            ticket.install or 'unknown',
             ticket.title,
             ticket.description,
             ticket.issueType,
@@ -668,7 +654,7 @@ def store_ticket(ticket: TicketInput, output: ClarifiedOutput):
 async def root():
     """Root endpoint"""
     return {
-        "service": "Jira Clarifier API",
+        "service": "Go Bot API",
         "version": "1.0.0",
         "status": "operational",
         "features": {
@@ -699,7 +685,7 @@ async def clarify_ticket(ticket: TicketInput):
     """
     Clarify ticket and increment usage counter
     """
-    license_key = ticket.orgId or "free_user"
+    license_key = ticket.install or "free_user"
     
     # For paid users, check and increment usage
     if license_key != "free_user":
@@ -1033,8 +1019,8 @@ async def get_license_key_by_payment_intent(payment_intent_id: str):
         conn.close()
         
 
-@app.get("/analytics/{org_id}")
-async def get_analytics(org_id: str):
+@app.get("/analytics/{install}")
+async def get_analytics(install: str):
     """Get analytics for an organization"""
     if not ENABLE_ANALYTICS or not DATABASE_URL:
         raise HTTPException(status_code=404, detail="Analytics not enabled")
@@ -1053,19 +1039,19 @@ async def get_analytics(org_id: str):
                 AVG(processing_time) as avg_processing_time,
                 COUNT(DISTINCT DATE(created_at)) as active_days
             FROM tickets
-            WHERE org_id = %s
+            WHERE install = %s
             AND created_at > NOW() - INTERVAL '30 days'
-        """, (org_id,))
+        """, (install,))
         stats = cur.fetchone()
         
         # Get ticket types breakdown
         cur.execute("""
             SELECT issue_type, COUNT(*) as count
             FROM tickets
-            WHERE org_id = %s
+            WHERE install = %s
             AND created_at > NOW() - INTERVAL '30 days'
             GROUP BY issue_type
-        """, (org_id,))
+        """, (install,))
         types = cur.fetchall()
         
         return {
@@ -1177,7 +1163,7 @@ async def validate_license_key(key_input: AccessKeyInput):
         
         return AccessKeyResponse(
             valid=True,
-            orgId=key_code,
+            install=key_code,
             plan=key_data['plan'],
             message="License key validated successfully!",
             clarificationsRemaining=remaining
@@ -1288,6 +1274,42 @@ async def get_key_usage(key_code: str):
         conn.close()
 
 
+@app.get("/find-key-by-install")
+async def get_key_by_install(install: InstallData):
+    """
+    Get license key by Stripe payment intent ID
+    Used by success page to display key
+    """
+    conn = get_db_connection()
+    if not conn:
+        raise HTTPException(status_code=500, detail="Database unavailable")
+    
+    try:
+        cur = conn.cursor()
+        
+        cur.execute("""
+            SELECT key_code, plan, created_at, expires_at, is_active
+            FROM license_keys
+            WHERE install = %s
+        """, (install.install,))
+        
+        result = cur.fetchone()
+        
+        if not result:
+            raise HTTPException(status_code=404, detail="License key not found")
+        
+        return {
+            "keyCode": result['key_code'],
+            "plan": result['plan'],
+            "createdAt": result['created_at'].isoformat() if result['created_at'] else None,
+            "expiresAt": result['expires_at'].isoformat() if result['expires_at'] else None,
+            "isActive": result['is_active']
+        }
+        
+    finally:
+        conn.close()
+
+
 @app.get("/license-key/{payment_intent_id}")
 async def get_license_key_by_payment(payment_intent_id: str):
     """
@@ -1340,7 +1362,7 @@ async def get_feedback_stats():
             SELECT 
                 feedback_type,
                 COUNT(*) as count,
-                COUNT(DISTINCT org_id) as unique_orgs
+                COUNT(DISTINCT install) as unique_orgs
             FROM feedback
             WHERE created_at > NOW() - INTERVAL '30 days'
             GROUP BY feedback_type
