@@ -11,6 +11,7 @@ import ForgeReconciler, {
     ButtonGroup,
     SectionMessage,
     Form,
+    Link,
     Textfield,
     Modal,
     ModalTransition
@@ -392,15 +393,13 @@ const App = () => {
                   >Apply to Ticket</Button>
                   <Button 
                     onClick={clarifyTicket}
-                  >Clarify Again</Button>
+                  >Go Bot Again</Button>
                 </ButtonGroup>
         } else {
           jsx = <Button 
                   onClick={clarifyTicket}
                   appearance="primary"
-                >
-                Clarify Ticket
-              </Button>
+                >Go Bot</Button>
         }
       }
       return (
@@ -431,7 +430,7 @@ const App = () => {
  
       <Stack>
         <Text>
-          <Em>Transform vague tickets into crystal-clear scope with acceptance criteria.</Em>
+          <Em>Transform tickets into crystal-clear scope with initial AI implementation.</Em>
         </Text>
       </Stack>
 
@@ -471,9 +470,8 @@ const App = () => {
               </Form>
               
               <Text>
-                <Em>
-                  Don't have a key? </Em> 
-                    Purchase here: https://gobot.ai/checkout
+                <Em> Don't have a key? </Em> 
+                Purchase here: <Link href="https://gobot.ai/checkout">https://gobot.ai/checkout</Link>  
               </Text>  
 
             </Box>

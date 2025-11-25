@@ -156,7 +156,7 @@ class FeedbackInput(BaseModel):
 
 class AccessKeyInput(BaseModel):
     accessKey: str = Field(..., description="License key to validate")
-    install: str
+    install: str | None = None
 
 class AccessKeyResponse(BaseModel):
     valid: bool
@@ -1087,10 +1087,13 @@ async def submit_feedback(feedback: FeedbackInput):
 
 
 @app.post("/validate-key", response_model=AccessKeyResponse)
-async def validate_license_key(key_input: AccessKeyInput):
+async def validate_license_key(request: Request, key_input: AccessKeyInput):
     """
     Validate a license key and check usage limits
     """
+    client_host = request.client.host
+    print(f"Request received from host: {client_host}")
+    
     key_code = key_input.accessKey.strip().upper()
     
     conn = get_db_connection()

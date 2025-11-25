@@ -18,7 +18,7 @@ app:
     name: nodejs22.x
     memoryMB: 256
     architecture: arm64
-  id: ari:cloud:ecosystem::app/bada8dda-801f-4a83-84eb-efd1800033a0
+  id: ari:cloud:ecosystem::app/9eb6c48c-0089-4802-ac61-aea3a449560f
 permissions:
   scopes:
     - write:jira-work
