@@ -21,8 +21,7 @@ import { requestJira, invoke } from '@forge/bridge';
 
 const App = () => {
     const context = useProductContext();
-    const issueKey = context?.issueKey;
-    
+
     const [clarifiedData, setClarifiedData] = useState(null);
     const [isAnalyzing, setAnalyzing] = useState(false);
     const [isLoading, setLoading] = useState(false);
@@ -36,6 +35,7 @@ const App = () => {
     const [install, setInstall] = useState(null);
     const [plan, setPlan] = useState('free');
     const [isValidatingKey, setValidatingKey] = useState(false);
+    
     
     const extractDescription = (description) => {
         if (!description) return '';
@@ -178,8 +178,13 @@ const App = () => {
       }
     };
 
-    const checkOnAccessKey = async () =>{
-        const result = await invoke('getKeyByInstall');
+    const checkOnAccessKey = async (install) =>{
+      try {
+        setValidatingKey(true);
+        setError(null);
+        const result = await invoke('getKeyByInstall', { install: install });
+        console.log('Results..');
+        console.log(result);
         if (result.valid) {
             setInstall(result.install);
             setPlan(result.plan);
@@ -187,8 +192,15 @@ const App = () => {
             setAccessKey(result.key);
             return result.key;
         } else {
-            throw 'No Key Found';
+            console.log("No key found by install.");
+            return null;
         }
+      }catch(e){
+        console.error(e);
+      } finally {
+        setValidatingKey(false);
+  
+      }
     }
 
 
@@ -416,11 +428,21 @@ const App = () => {
       </Box>);
     }
 
- React.useEffect(() => {
+ React.useEffect(async () => {
    if (context) {
-     const issueId = context?.extension.issue.id;
-     checkOnAccessKey().then((key) => validateAccessKey(key));
-     getIssueData(issueId).then(setIssueDetails);
+    const issueId = context?.extension.issue.id;
+
+    // if(install != context?.accountId){   
+    //   setInstall(context?.accountId);  
+    // } 
+    console.log("Account");
+    console.log(context?.accountId);
+    checkOnAccessKey(context?.accountId).then((key) => {
+      if (key){
+        validateAccessKey(key)
+      }
+    });
+    getIssueData(issueId).then(setIssueDetails);
    }
  }, [context]);
 

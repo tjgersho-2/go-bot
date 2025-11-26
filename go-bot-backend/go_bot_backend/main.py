@@ -156,7 +156,7 @@ class FeedbackInput(BaseModel):
 
 class AccessKeyInput(BaseModel):
     accessKey: str = Field(..., description="License key to validate")
-    install: str | None = None
+    install: str = Field(..., description="Install ID")
 
 class AccessKeyResponse(BaseModel):
     valid: bool
@@ -1094,11 +1094,9 @@ async def validate_license_key(request: Request, key_input: AccessKeyInput):
     """
     Validate a license key and check usage limits
     """
-    client_host = request.client.host
-    print(f"Request received from host: {client_host}")
 
     key_code = key_input.accessKey.strip().upper()
-    install = client_host
+    install = key_input.install
     
     conn = get_db_connection()
     if not conn:
@@ -1281,7 +1279,7 @@ async def get_key_usage(key_code: str):
         conn.close()
 
 
-@app.get("/find-key-by-install")
+@app.post("/find-key-by-install")
 async def get_key_by_install(install: InstallData):
     """
     Get license key by Stripe payment intent ID

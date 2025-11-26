@@ -26,15 +26,15 @@ resolver.define('getText', async (req) => {
 /**
  * Health check resolver (for testing)
  */
-resolver.define('getKeyByInstall', async () => {
- 
+resolver.define('getKeyByInstall', async ({ payload }) => {
+    const { install } = payload;
     const response = await fetch(`${API_BASE_URL}/find-key-by-install`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        install:  window.location.host
+        install:  install
       })
      }
     );
