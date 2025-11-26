@@ -10,11 +10,11 @@ import { useSearchParams } from 'next/navigation';
 import { useRouter } from 'next/navigation';
 
 export default function CheckoutPage() {
-  const searchParams = useSearchParams();
+  // const searchParams = useSearchParams();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState<string | null>(null);
   
-  const preSelectedPlan = searchParams.get('plan') || 'pro';
+  // const preSelectedPlan = searchParams.get('plan') || 'pro';
 
   const plans = [
     {
