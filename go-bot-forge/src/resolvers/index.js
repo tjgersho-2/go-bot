@@ -43,13 +43,13 @@ resolver.define('getKeyByInstall', async () => {
     }
     const data = await response.json();
     return data;
-   
 });
+
  
 /**
  * Call the AI clarification service
  */
-const callClarificationAPI = async (issueData, orgId) => {
+const callClarificationAPI = async (issueData, install) => {
   try {
     const response = await fetch(`${API_BASE_URL}/clarify`, {
       method: 'POST',
@@ -61,7 +61,7 @@ const callClarificationAPI = async (issueData, orgId) => {
         description: issueData.description,
         issueType: issueData.issueType,
         priority: issueData.priority,
-        orgId: orgId || 'unknown'
+        install: install || 'unknown'
       })
     });
     
@@ -81,11 +81,11 @@ const callClarificationAPI = async (issueData, orgId) => {
  * Resolver function for clarifying an issue
  */
 resolver.define('clarifyIssue', async ({ payload }) => {
-  const { issueData, orgId } = payload;
+  const { issueData, install } = payload;
   
   try {
     // Call AI service with orgId for rate limiting
-    const clarifiedData = await callClarificationAPI(issueData, orgId);
+    const clarifiedData = await callClarificationAPI(issueData, install);
     return clarifiedData;
   } catch (error) {
     return {

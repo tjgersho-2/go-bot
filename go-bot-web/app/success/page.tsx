@@ -4,7 +4,7 @@ import { useEffect, useState, Suspense } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { CheckCircle2, Copy, Mail, ExternalLink, Sparkles, AlertCircle } from 'lucide-react';
+import { CheckCircle2, Copy, Mail, ExternalLink, Sparkles, AlertCircle, Bot, Rocket, Code } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 
 function SuccessContent() {
@@ -74,9 +74,11 @@ function SuccessContent() {
     <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
       {/* Background Effects */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 -left-40 w-96 h-96 bg-green-500/20 rounded-full blur-3xl" />
-        <div className="absolute top-40 -right-40 w-96 h-96 bg-emerald-500/20 rounded-full blur-3xl" />
+        <div className="absolute top-0 -left-40 w-96 h-96 bg-emerald-500/20 rounded-full blur-3xl" />
+        <div className="absolute top-40 -right-40 w-96 h-96 bg-cyan-500/20 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 left-1/2 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl" />
       </div>
+      <div className="fixed inset-0 bg-[linear-gradient(to_right,#4f4f4f2e_1px,transparent_1px),linear-gradient(to_bottom,#4f4f4f2e_1px,transparent_1px)] bg-[size:14px_24px] pointer-events-none" />
 
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
@@ -92,7 +94,7 @@ function SuccessContent() {
             transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
             className="flex justify-center mb-8"
           >
-            <div className="w-20 h-20 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center">
+            <div className="w-20 h-20 bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-full flex items-center justify-center">
               <CheckCircle2 className="w-12 h-12 text-white" />
             </div>
           </motion.div>
@@ -113,13 +115,13 @@ function SuccessContent() {
             transition={{ delay: 0.4 }}
             className="text-center text-slate-300 mb-8"
           >
-            Thank you for your purchase! Your license key is ready.
+            Welcome to GoBot! Your license key is ready.
           </motion.p>
 
           {/* License Key Section */}
           {loading ? (
             <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500 mx-auto" />
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500 mx-auto" />
               <p className="text-slate-400 mt-4">Generating your license key...</p>
               <p className="text-slate-500 text-sm mt-2">This usually takes just a few seconds</p>
             </div>
@@ -130,7 +132,10 @@ function SuccessContent() {
               <p className="text-slate-400 text-sm mb-6">
                 Don't worry! Your payment was successful. Your license key will be sent to your email shortly.
               </p>
-              <Button onClick={() => window.location.href = '/'}>
+              <Button 
+                onClick={() => window.location.href = '/'}
+                className="bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-700 hover:to-cyan-700"
+              >
                 Return to Home
               </Button>
             </div>
@@ -144,21 +149,21 @@ function SuccessContent() {
               <div className="bg-slate-800/50 rounded-xl p-6 mb-6">
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                    <Sparkles className="w-5 h-5 text-indigo-400" />
+                    <Sparkles className="w-5 h-5 text-emerald-400" />
                     Your License Key
                   </h3>
                   <Button
                     onClick={copyToClipboard}
                     variant="ghost"
                     size="sm"
-                    className="text-indigo-400 hover:text-indigo-300"
+                    className="text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10"
                   >
                     <Copy className="w-4 h-4 mr-2" />
                     {copied ? 'Copied!' : 'Copy'}
                   </Button>
                 </div>
                 
-                <div className="bg-slate-900 rounded-lg p-4 font-mono text-2xl text-center text-indigo-400 tracking-wider">
+                <div className="bg-slate-900 rounded-lg p-4 font-mono text-2xl text-center text-emerald-400 tracking-wider">
                   {licenseKey}
                 </div>
 
@@ -171,25 +176,26 @@ function SuccessContent() {
               </div>
 
               {/* Activation Steps */}
-              <div className="bg-indigo-500/10 border border-indigo-500/30 rounded-xl p-6 mb-6">
-                <h4 className="font-semibold text-white mb-4">
-                  🚀 Activate Your License (3 steps)
+              <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-6 mb-6">
+                <h4 className="font-semibold text-white mb-4 flex items-center gap-2">
+                  <Rocket className="w-5 h-5 text-emerald-400" />
+                  Activate Your License (3 steps)
                 </h4>
                 <ol className="space-y-3 text-slate-300">
                   <li className="flex gap-3">
-                    <span className="flex-shrink-0 w-6 h-6 bg-indigo-500 rounded-full flex items-center justify-center text-white text-sm font-bold">
+                    <span className="flex-shrink-0 w-6 h-6 bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-full flex items-center justify-center text-white text-sm font-bold">
                       1
                     </span>
-                    <span>Install Go Bot in your Jira workspace (if not already installed)</span>
+                    <span>Install GoBot in your Jira workspace (if not already installed)</span>
                   </li>
                   <li className="flex gap-3">
-                    <span className="flex-shrink-0 w-6 h-6 bg-indigo-500 rounded-full flex items-center justify-center text-white text-sm font-bold">
+                    <span className="flex-shrink-0 w-6 h-6 bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-full flex items-center justify-center text-white text-sm font-bold">
                       2
                     </span>
-                    <span>Open any Jira ticket and find the Go Bot panel on the right</span>
+                    <span>Open any Jira ticket and find the GoBot panel on the right</span>
                   </li>
                   <li className="flex gap-3">
-                    <span className="flex-shrink-0 w-6 h-6 bg-indigo-500 rounded-full flex items-center justify-center text-white text-sm font-bold">
+                    <span className="flex-shrink-0 w-6 h-6 bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-full flex items-center justify-center text-white text-sm font-bold">
                       3
                     </span>
                     <span>Click "Enter Access Key" and paste your license key</span>
@@ -197,11 +203,22 @@ function SuccessContent() {
                 </ol>
               </div>
 
+              {/* What's next */}
+              <div className="bg-cyan-500/10 border border-cyan-500/30 rounded-xl p-6 mb-6">
+                <h4 className="font-semibold text-white mb-3 flex items-center gap-2">
+                  <Code className="w-5 h-5 text-cyan-400" />
+                  What happens next?
+                </h4>
+                <p className="text-slate-300 text-sm">
+                  Once activated, GoBot will analyze your Jira tickets and generate clear acceptance criteria plus working MVP code. Just click "Go" on any ticket!
+                </p>
+              </div>
+
               {/* Action Buttons */}
               <div className="flex flex-col sm:flex-row gap-4">
                 <Button
                   onClick={openForgeInstall}
-                  className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
+                  className="flex-1 bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-700 hover:to-cyan-700"
                   size="lg"
                 >
                   <ExternalLink className="w-5 h-5 mr-2" />
@@ -210,7 +227,7 @@ function SuccessContent() {
                 <Button
                   onClick={() => window.location.href = '/'}
                   variant="outline"
-                  className="flex-1"
+                  className="flex-1 border-slate-700 hover:border-slate-600"
                   size="lg"
                 >
                   Back to Home
@@ -231,19 +248,32 @@ function SuccessContent() {
             </p>
             <div className="flex justify-center gap-4 text-sm">
               <a
-                href="mailto:support@jiraclarifier.com"
-                className="text-indigo-400 hover:text-indigo-300"
+                href="mailto:support@gobot.dev"
+                className="text-emerald-400 hover:text-emerald-300"
               >
                 Email Support
               </a>
               <span className="text-slate-600">•</span>
               <a
                 href="/docs"
-                className="text-indigo-400 hover:text-indigo-300"
+                className="text-emerald-400 hover:text-emerald-300"
               >
                 Documentation
               </a>
             </div>
+          </motion.div>
+
+          {/* Logo */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 1 }}
+            className="mt-6 flex items-center justify-center gap-2"
+          >
+            <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center">
+              <Bot className="w-4 h-4 text-white" />
+            </div>
+            <span className="text-slate-500 text-sm">GoBot</span>
           </motion.div>
         </Card>
       </motion.div>
@@ -255,7 +285,7 @@ export default function SuccessPage() {
   return (
     <Suspense fallback={
       <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500" />
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500" />
       </div>
     }>
       <SuccessContent />

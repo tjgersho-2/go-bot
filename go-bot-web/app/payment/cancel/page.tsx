@@ -3,7 +3,7 @@
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { XCircle, ArrowLeft, MessageCircle } from 'lucide-react';
+import { XCircle, ArrowLeft, MessageCircle, Bot } from 'lucide-react';
 
 export default function CancelPage() {
   return (
@@ -13,6 +13,7 @@ export default function CancelPage() {
         <div className="absolute top-0 -left-40 w-96 h-96 bg-orange-500/20 rounded-full blur-3xl" />
         <div className="absolute top-40 -right-40 w-96 h-96 bg-red-500/20 rounded-full blur-3xl" />
       </div>
+      <div className="fixed inset-0 bg-[linear-gradient(to_right,#4f4f4f2e_1px,transparent_1px),linear-gradient(to_bottom,#4f4f4f2e_1px,transparent_1px)] bg-[size:14px_24px] pointer-events-none" />
 
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
@@ -61,7 +62,7 @@ export default function CancelPage() {
           >
             <Button
               onClick={() => window.location.href = '/checkout'}
-              className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
+              className="bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-700 hover:to-cyan-700"
               size="lg"
             >
               Try Again
@@ -71,6 +72,7 @@ export default function CancelPage() {
               onClick={() => window.location.href = '/'}
               variant="outline"
               size="lg"
+              className="border-slate-700 hover:border-slate-600"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to Home
@@ -89,8 +91,8 @@ export default function CancelPage() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <a
-                href="mailto:support@jiraclarifier.com"
-                className="text-indigo-400 hover:text-indigo-300 flex items-center justify-center gap-2"
+                href="mailto:support@gobot.dev"
+                className="text-emerald-400 hover:text-emerald-300 flex items-center justify-center gap-2"
               >
                 <MessageCircle className="w-4 h-4" />
                 Contact Support
@@ -98,7 +100,7 @@ export default function CancelPage() {
               <span className="hidden sm:inline text-slate-600">•</span>
               <a
                 href="/faq"
-                className="text-indigo-400 hover:text-indigo-300"
+                className="text-emerald-400 hover:text-emerald-300"
               >
                 View FAQ
               </a>
@@ -110,11 +112,24 @@ export default function CancelPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.9 }}
-            className="mt-8 p-4 bg-indigo-500/10 border border-indigo-500/30 rounded-lg"
+            className="mt-8 p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-lg"
           >
             <p className="text-sm text-slate-300">
-              💡 <strong>Remember:</strong> You can start with our Free plan (5 clarifications/month) with no credit card required!
+              💡 <strong>Remember:</strong> You can start with our Free plan (5 tickets/month) with no credit card required!
             </p>
+          </motion.div>
+
+          {/* Logo */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 1.1 }}
+            className="mt-8 flex items-center justify-center gap-2"
+          >
+            <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center">
+              <Bot className="w-4 h-4 text-white" />
+            </div>
+            <span className="text-slate-500 text-sm">GoBot</span>
           </motion.div>
         </Card>
       </motion.div>

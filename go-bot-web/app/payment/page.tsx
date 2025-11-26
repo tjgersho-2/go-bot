@@ -6,7 +6,7 @@ import { Elements } from '@stripe/react-stripe-js';
 import { useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Card } from '@/components/ui/card';
-import { ArrowLeft, Shield, Lock } from 'lucide-react';
+import { ArrowLeft, Shield, Lock, Bot, Code, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import CheckoutForm from '@/components/ui/checkoutform';
 
@@ -24,19 +24,19 @@ export default function PaymentPage() {
   const planDetails = {
     pro: {
       name: 'Pro',
-      price: '$5',
+      price: '$19',
       period: '/month',
-      clarifications: 100,
+      tickets: 100,
       description: 'Perfect for individual developers',
-      color: 'from-indigo-600 to-purple-600'
+      color: 'from-emerald-600 to-cyan-600'
     },
     team: {
       name: 'Team',
-      price: '$30',
+      price: '$79',
       period: '/month',
-      clarifications: 1000,
+      tickets: null,
       description: 'For growing engineering teams',
-      color: 'from-purple-600 to-pink-600'
+      color: 'from-cyan-600 to-teal-600'
     }
   };
 
@@ -83,7 +83,7 @@ export default function PaymentPage() {
   const appearance = {
     theme: 'night' as const,
     variables: {
-      colorPrimary: '#6366f1',
+      colorPrimary: '#10b981',
       colorBackground: '#0f172a',
       colorText: '#f1f5f9',
       colorDanger: '#ef4444',
@@ -98,8 +98,8 @@ export default function PaymentPage() {
         boxShadow: 'none',
       },
       '.Input:focus': {
-        border: '1px solid #6366f1',
-        boxShadow: '0 0 0 3px rgba(99, 102, 241, 0.1)',
+        border: '1px solid #10b981',
+        boxShadow: '0 0 0 3px rgba(16, 185, 129, 0.1)',
       },
       '.Label': {
         color: '#cbd5e1',
@@ -118,8 +118,9 @@ export default function PaymentPage() {
     <div className="min-h-screen bg-slate-950">
       {/* Background Effects */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 -left-40 w-96 h-96 bg-indigo-500/20 rounded-full blur-3xl" />
-        <div className="absolute top-40 -right-40 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl" />
+        <div className="absolute top-0 -left-40 w-96 h-96 bg-emerald-500/20 rounded-full blur-3xl" />
+        <div className="absolute top-40 -right-40 w-96 h-96 bg-cyan-500/20 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 left-1/2 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl" />
       </div>
       <div className="fixed inset-0 bg-[linear-gradient(to_right,#4f4f4f2e_1px,transparent_1px),linear-gradient(to_bottom,#4f4f4f2e_1px,transparent_1px)] bg-[size:14px_24px] pointer-events-none" />
 
@@ -127,12 +128,17 @@ export default function PaymentPage() {
       <header className="relative z-10 border-b border-slate-800">
         <div className="container mx-auto px-4 py-6">
           <div className="flex items-center justify-between">
-            <a href="/" className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-purple-400">
-              Go Bot
+            <a href="/" className="flex items-center gap-2">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center">
+                <Bot className="w-6 h-6 text-white" />
+              </div>
+              <span className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-cyan-400">
+                GoBot
+              </span>
             </a>
             <Button 
               variant="ghost" 
-              className="text-slate-300"
+              className="text-slate-300 hover:text-white"
               onClick={() => window.history.back()}
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
@@ -154,7 +160,7 @@ export default function PaymentPage() {
               Complete Your Purchase
             </h1>
             <p className="text-xl text-slate-300">
-              You're just moments away from better Jira tickets
+              You're just moments away from shipping code faster
             </p>
           </motion.div>
 
@@ -179,8 +185,10 @@ export default function PaymentPage() {
 
                 <div className="space-y-4 mb-6">
                   <div className="flex justify-between text-slate-300">
-                    <span>Clarifications per month</span>
-                    <span className="font-semibold text-white">{plan.clarifications}</span>
+                    <span>Tickets per month</span>
+                    <span className="font-semibold text-white">
+                      {plan.tickets ? plan.tickets : 'Unlimited'}
+                    </span>
                   </div>
                   <div className="flex justify-between text-slate-300">
                     <span>Billing cycle</span>
@@ -201,16 +209,31 @@ export default function PaymentPage() {
 
                 <div className="space-y-3 text-sm text-slate-400">
                   <div className="flex items-start gap-2">
-                    <Shield className="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0" />
+                    <Shield className="w-4 h-4 text-emerald-400 mt-0.5 flex-shrink-0" />
                     <span>Cancel anytime, no questions asked</span>
                   </div>
                   <div className="flex items-start gap-2">
-                    <Shield className="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0" />
+                    <Shield className="w-4 h-4 text-emerald-400 mt-0.5 flex-shrink-0" />
                     <span>30-day money-back guarantee</span>
                   </div>
                   <div className="flex items-start gap-2">
-                    <Lock className="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0" />
+                    <Lock className="w-4 h-4 text-emerald-400 mt-0.5 flex-shrink-0" />
                     <span>Secure payment powered by Stripe</span>
+                  </div>
+                </div>
+
+                {/* What you get */}
+                <div className="mt-6 pt-6 border-t border-slate-700">
+                  <h4 className="text-sm font-semibold text-white mb-3">What you'll get:</h4>
+                  <div className="space-y-2 text-sm text-slate-400">
+                    <div className="flex items-center gap-2">
+                      <Code className="w-4 h-4 text-cyan-400" />
+                      <span>Full MVP code generation</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Zap className="w-4 h-4 text-emerald-400" />
+                      <span>AI-powered ticket clarification</span>
+                    </div>
                   </div>
                 </div>
               </Card>
@@ -227,7 +250,7 @@ export default function PaymentPage() {
 
                 {loading ? (
                   <div className="flex flex-col items-center justify-center py-12">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500 mb-4" />
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500 mb-4" />
                     <p className="text-slate-400">Initializing secure payment...</p>
                   </div>
                 ) : error ? (
@@ -271,7 +294,7 @@ export default function PaymentPage() {
             className="mt-12 text-center"
           >
             <p className="text-slate-400 text-sm mb-4">
-              Trusted by 4,872+ developers worldwide
+              Trusted by 12,847+ developers worldwide
             </p>
             <div className="flex items-center justify-center gap-8 opacity-50">
               <img src="/stripe-badge.svg" alt="Powered by Stripe" className="h-8" />

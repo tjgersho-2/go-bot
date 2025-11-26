@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle2, ArrowRight, Shield, Zap, Users, Star, Sparkles, TrendingUp } from 'lucide-react';
+import { CheckCircle2, ArrowRight, Shield, Zap, Users, Star, Sparkles, TrendingUp, Bot, Code, Rocket } from 'lucide-react';
 import { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useRouter } from 'next/navigation';
@@ -22,12 +22,12 @@ export default function CheckoutPage() {
       name: 'Free',
       price: 0,
       period: '/month',
-      clarifications: 5,
-      description: 'Try Go Bot',
+      tickets: 5,
+      description: 'Try GoBot free',
       features: [
-        '5 clarifications per month',
-        'Basic acceptance criteria',
-        'Edge cases detection',
+        '5 tickets per month',
+        'Basic clarification',
+        'Simple code snippets',
         'Community support',
         'Perfect for trying it out'
       ],
@@ -40,54 +40,54 @@ export default function CheckoutPage() {
     {
       id: 'pro',
       name: 'Pro',
-      price: 5,
+      price: 19,
       period: '/month',
-      clarifications: 100,
+      tickets: 100,
       description: 'Perfect for individual developers',
       features: [
-        '100 clarifications per month',
-        'Advanced AI analysis',
-        'Test scenarios generation',
-        'Success metrics tracking',
+        '100 tickets per month',
+        'Full code generation',
+        'All frameworks supported',
+        'Edge cases & test scenarios',
         'Priority email support',
-        'Export to Markdown'
+        'Export to any format'
       ],
       cta: 'Get Pro',
       highlight: true,
       priceId: "price_1SW1moRU6Di3TZwT442hMmUr",
       popular: true,
-      color: 'from-indigo-600 to-purple-600'
+      color: 'from-emerald-600 to-cyan-600'
     },
     {
       id: 'team',
       name: 'Team',
-      price: 30,
+      price: 79,
       period: '/month',
-      clarifications: 1000,
+      tickets: null,
       description: 'For growing engineering teams',
       features: [
-        '1,000 clarifications per month',
+        'Unlimited tickets',
         'Everything in Pro',
+        'Custom code templates',
         'Team analytics dashboard',
-        'Custom AI training',
-        'Slack integration',
+        'API access',
         'Dedicated support channel'
       ],
       cta: 'Get Team',
       highlight: false,
       priceId: "price_1SW1nYRU6Di3TZwTgaZ6uGvE",
       popular: false,
-      color: 'from-purple-600 to-pink-600'
+      color: 'from-cyan-600 to-teal-600'
     },
     {
       id: 'enterprise',
       name: 'Enterprise',
       price: null,
       period: '',
-      clarifications: null,
+      tickets: null,
       description: 'Custom solutions for large orgs',
       features: [
-        'Unlimited clarifications',
+        'Unlimited everything',
         'Everything in Team',
         'SSO & SCIM provisioning',
         'SOC2, GDPR compliance',
@@ -98,7 +98,7 @@ export default function CheckoutPage() {
       highlight: false,
       priceId: null,
       popular: false,
-      color: 'from-pink-600 to-red-600'
+      color: 'from-teal-600 to-emerald-600'
     }
   ];
 
@@ -111,7 +111,7 @@ export default function CheckoutPage() {
     
     // Handle enterprise
     if (planId === 'enterprise') {
-      window.location.href = 'mailto:sales@jiraclarifier.com?subject=Enterprise%20Inquiry';
+      window.location.href = 'mailto:sales@gobot.dev?subject=Enterprise%20Inquiry';
       return;
     }
 
@@ -131,8 +131,9 @@ export default function CheckoutPage() {
     <div className="min-h-screen bg-slate-950">
       {/* Background Effects */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 -left-40 w-96 h-96 bg-indigo-500/20 rounded-full blur-3xl" />
-        <div className="absolute top-40 -right-40 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl" />
+        <div className="absolute top-0 -left-40 w-96 h-96 bg-emerald-500/20 rounded-full blur-3xl" />
+        <div className="absolute top-40 -right-40 w-96 h-96 bg-cyan-500/20 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 left-1/2 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl" />
       </div>
       <div className="fixed inset-0 bg-[linear-gradient(to_right,#4f4f4f2e_1px,transparent_1px),linear-gradient(to_bottom,#4f4f4f2e_1px,transparent_1px)] bg-[size:14px_24px] pointer-events-none" />
 
@@ -140,10 +141,15 @@ export default function CheckoutPage() {
       <header className="relative z-10 border-b border-slate-800">
         <div className="container mx-auto px-4 py-6">
           <div className="flex items-center justify-between">
-            <a href="/" className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-purple-400">
-              Go Bot
+            <a href="/" className="flex items-center gap-2">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center">
+                <Bot className="w-6 h-6 text-white" />
+              </div>
+              <span className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-cyan-400">
+                GoBot
+              </span>
             </a>
-            <Button variant="ghost" className="text-slate-300" onClick={() => window.location.href = '/'}>
+            <Button variant="ghost" className="text-slate-300 hover:text-white" onClick={() => window.location.href = '/'}>
               ← Back
             </Button>
           </div>
@@ -158,7 +164,7 @@ export default function CheckoutPage() {
           animate={{ opacity: 1, y: 0 }}
           className="text-center max-w-3xl mx-auto mb-16"
         >
-          <Badge className="mb-6 px-4 py-2 bg-indigo-500/10 border-indigo-500/30 backdrop-blur-sm">
+          <Badge className="mb-6 px-4 py-2 bg-emerald-500/10 border-emerald-500/30 backdrop-blur-sm">
             <Sparkles className="w-3 h-3 mr-1" />
             Simple Monthly Subscriptions
           </Badge>
@@ -168,11 +174,11 @@ export default function CheckoutPage() {
           </h1>
           
           <p className="text-xl text-slate-300 leading-relaxed">
-            Start free, upgrade anytime. Cancel whenever you want.
+            Go from ticket to working code. Start free, upgrade anytime.
           </p>
 
-          <div className="mt-6 p-4 bg-green-500/10 border border-green-500/30 rounded-lg">
-            <p className="text-sm text-green-300">
+          <div className="mt-6 p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-lg">
+            <p className="text-sm text-emerald-300">
               <CheckCircle2 className="w-4 h-4 inline mr-2" />
               After purchase, you'll receive a license key via email
             </p>
@@ -191,8 +197,8 @@ export default function CheckoutPage() {
             >
               {plan.popular && (
                 <>
-                  <div className="absolute -inset-1 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 rounded-3xl blur-lg opacity-75" />
-                  <Badge className="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-indigo-600 to-purple-600 border-0 z-20">
+                  <div className="absolute -inset-1 bg-gradient-to-r from-emerald-600 via-cyan-600 to-teal-600 rounded-3xl blur-lg opacity-75" />
+                  <Badge className="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-emerald-600 to-cyan-600 border-0 z-20">
                     <Star className="w-3 h-3 mr-1" />
                     Most Popular
                   </Badge>
@@ -201,7 +207,7 @@ export default function CheckoutPage() {
               
               <Card className={`relative p-8 h-full bg-slate-900/90 backdrop-blur-xl ${
                 plan.highlight 
-                  ? 'border-indigo-500/50' 
+                  ? 'border-emerald-500/50' 
                   : 'border-slate-800'
               }`}>
                 <div>
@@ -215,9 +221,14 @@ export default function CheckoutPage() {
                           <span className="text-4xl font-bold text-white">${plan.price}</span>
                           <span className="text-slate-400">{plan.period}</span>
                         </div>
-                        {plan.clarifications && (
-                          <p className="text-sm text-indigo-400 mt-2 font-medium">
-                            {plan.clarifications} clarifications/month
+                        {plan.tickets && (
+                          <p className="text-sm text-emerald-400 mt-2 font-medium">
+                            {plan.tickets} tickets/month
+                          </p>
+                        )}
+                        {plan.tickets === null && plan.id !== 'enterprise' && (
+                          <p className="text-sm text-emerald-400 mt-2 font-medium">
+                            Unlimited tickets
                           </p>
                         )}
                       </>
@@ -229,7 +240,7 @@ export default function CheckoutPage() {
                   <ul className="space-y-3 mb-8">
                     {plan.features.map((feature, j) => (
                       <li key={j} className="flex items-start gap-2 text-sm text-slate-300">
-                        <CheckCircle2 className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
+                        <CheckCircle2 className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
                         <span>{feature}</span>
                       </li>
                     ))}
@@ -263,7 +274,7 @@ export default function CheckoutPage() {
           ))}
         </div>
 
-        {/* Comparison Table - keeping your existing table */}
+        {/* Comparison Table */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -280,40 +291,40 @@ export default function CheckoutPage() {
                 <tr>
                   <th className="text-left p-4 text-slate-300 font-medium">Feature</th>
                   <th className="text-center p-4 text-slate-300 font-medium">Free</th>
-                  <th className="text-center p-4 text-indigo-400 font-medium">Pro</th>
-                  <th className="text-center p-4 text-purple-400 font-medium">Team</th>
+                  <th className="text-center p-4 text-emerald-400 font-medium">Pro</th>
+                  <th className="text-center p-4 text-cyan-400 font-medium">Team</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800">
                 <tr>
-                  <td className="p-4 text-slate-300">Clarifications/month</td>
+                  <td className="p-4 text-slate-300">Tickets/month</td>
                   <td className="p-4 text-center text-slate-400">5</td>
                   <td className="p-4 text-center text-white font-medium">100</td>
-                  <td className="p-4 text-center text-white font-medium">1,000</td>
+                  <td className="p-4 text-center text-white font-medium">Unlimited</td>
                 </tr>
                 <tr>
-                  <td className="p-4 text-slate-300">AI Analysis</td>
-                  <td className="p-4 text-center"><CheckCircle2 className="w-5 h-5 text-green-400 mx-auto" /></td>
-                  <td className="p-4 text-center"><CheckCircle2 className="w-5 h-5 text-green-400 mx-auto" /></td>
-                  <td className="p-4 text-center"><CheckCircle2 className="w-5 h-5 text-green-400 mx-auto" /></td>
+                  <td className="p-4 text-slate-300">AI Clarification</td>
+                  <td className="p-4 text-center"><CheckCircle2 className="w-5 h-5 text-emerald-400 mx-auto" /></td>
+                  <td className="p-4 text-center"><CheckCircle2 className="w-5 h-5 text-emerald-400 mx-auto" /></td>
+                  <td className="p-4 text-center"><CheckCircle2 className="w-5 h-5 text-emerald-400 mx-auto" /></td>
                 </tr>
                 <tr>
-                  <td className="p-4 text-slate-300">Test Scenarios</td>
+                  <td className="p-4 text-slate-300">Full Code Generation</td>
                   <td className="p-4 text-center text-slate-600">—</td>
-                  <td className="p-4 text-center"><CheckCircle2 className="w-5 h-5 text-green-400 mx-auto" /></td>
-                  <td className="p-4 text-center"><CheckCircle2 className="w-5 h-5 text-green-400 mx-auto" /></td>
+                  <td className="p-4 text-center"><CheckCircle2 className="w-5 h-5 text-emerald-400 mx-auto" /></td>
+                  <td className="p-4 text-center"><CheckCircle2 className="w-5 h-5 text-emerald-400 mx-auto" /></td>
                 </tr>
                 <tr>
-                  <td className="p-4 text-slate-300">Priority Support</td>
+                  <td className="p-4 text-slate-300">All Frameworks</td>
                   <td className="p-4 text-center text-slate-600">—</td>
-                  <td className="p-4 text-center"><CheckCircle2 className="w-5 h-5 text-green-400 mx-auto" /></td>
-                  <td className="p-4 text-center"><CheckCircle2 className="w-5 h-5 text-green-400 mx-auto" /></td>
+                  <td className="p-4 text-center"><CheckCircle2 className="w-5 h-5 text-emerald-400 mx-auto" /></td>
+                  <td className="p-4 text-center"><CheckCircle2 className="w-5 h-5 text-emerald-400 mx-auto" /></td>
                 </tr>
                 <tr>
-                  <td className="p-4 text-slate-300">Team Analytics</td>
+                  <td className="p-4 text-slate-300">API Access</td>
                   <td className="p-4 text-center text-slate-600">—</td>
                   <td className="p-4 text-center text-slate-600">—</td>
-                  <td className="p-4 text-center"><CheckCircle2 className="w-5 h-5 text-green-400 mx-auto" /></td>
+                  <td className="p-4 text-center"><CheckCircle2 className="w-5 h-5 text-emerald-400 mx-auto" /></td>
                 </tr>
               </tbody>
             </table>
@@ -329,17 +340,17 @@ export default function CheckoutPage() {
         >
           <div className="grid md:grid-cols-3 gap-8 mb-12">
             <div className="flex flex-col items-center gap-2">
-              <Shield className="w-10 h-10 text-indigo-400" />
+              <Shield className="w-10 h-10 text-emerald-400" />
               <h4 className="font-semibold text-white">Secure Payments</h4>
               <p className="text-sm text-slate-400">Powered by Stripe</p>
             </div>
             <div className="flex flex-col items-center gap-2">
-              <Users className="w-10 h-10 text-purple-400" />
-              <h4 className="font-semibold text-white">4,872+ Users</h4>
-              <p className="text-sm text-slate-400">Trust Go Bot</p>
+              <Users className="w-10 h-10 text-cyan-400" />
+              <h4 className="font-semibold text-white">12,847+ Developers</h4>
+              <p className="text-sm text-slate-400">Ship faster with GoBot</p>
             </div>
             <div className="flex flex-col items-center gap-2">
-              <TrendingUp className="w-10 h-10 text-pink-400" />
+              <TrendingUp className="w-10 h-10 text-teal-400" />
               <h4 className="font-semibold text-white">Cancel Anytime</h4>
               <p className="text-sm text-slate-400">No long-term commitment</p>
             </div>
@@ -358,13 +369,16 @@ export default function CheckoutPage() {
       <footer className="py-12 border-t border-slate-800 relative z-10 mt-20">
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-slate-400 text-sm">
-              © 2025 Go Bot. All rights reserved.
-            </p>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center">
+                <Bot className="w-5 h-5 text-white" />
+              </div>
+              <span className="text-slate-400 text-sm">© 2025 GoBot. All rights reserved.</span>
+            </div>
             <div className="flex gap-6 text-sm">
               <a href="/terms" className="text-slate-400 hover:text-white transition">Terms</a>
               <a href="/privacy" className="text-slate-400 hover:text-white transition">Privacy</a>
-              <a href="mailto:support@jiraclarifier.com" className="text-slate-400 hover:text-white transition">Support</a>
+              <a href="mailto:support@gobot.dev" className="text-slate-400 hover:text-white transition">Support</a>
             </div>
           </div>
         </div>

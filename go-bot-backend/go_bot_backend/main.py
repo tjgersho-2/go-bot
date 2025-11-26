@@ -194,6 +194,19 @@ def init_database():
     
     try:
         cur = conn.cursor()
+
+        # Organizations table
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS organizations (
+                id SERIAL PRIMARY KEY,
+                install VARCHAR(255) UNIQUE NOT NULL,
+                plan VARCHAR(50) NOT NULL DEFAULT 'free',
+                clarifications_limit INTEGER NOT NULL DEFAULT 5,
+                clarifications_used INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
                 
         # Tickets table for analytics
         cur.execute("""
@@ -234,12 +247,14 @@ def init_database():
                 key_code VARCHAR(255) UNIQUE NOT NULL,
                 customer_email VARCHAR(255) NOT NULL,
                 plan VARCHAR(50) NOT NULL,
+                install VARCHAR(255) UNIQUE,
                 
                 -- Subscription fields
                 stripe_subscription_id VARCHAR(255),
                 stripe_customer_id VARCHAR(255),
                 stripe_session_id VARCHAR(255),
-                
+                stripe_payment_intent_id VARCHAR(255),
+                    
                 -- Usage tracking
                 clarifications_limit INTEGER NOT NULL,
                 clarifications_used INTEGER DEFAULT 0,
@@ -256,27 +271,16 @@ def init_database():
             )
         """)
         
-        # Indexes
+        # Create indexes
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_install ON organizations(install)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_tickets_org ON tickets(install)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_feedback_org ON feedback(install)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_feedback_type ON feedback(feedback_type)")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_license_key_code ON license_keys(key_code)")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_license_email ON license_keys(customer_email)")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_license_subscription ON license_keys(stripe_subscription_id)")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_license_customer ON license_keys(stripe_customer_id)")
-
-    
-        # Indexes
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_license_key_code ON license_keys(key_code)")
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_license_email ON license_keys(customer_email)")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_license_session ON license_keys(stripe_session_id)")
-
-        
-        # Create indexes
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_feedback_org ON feedback(install)")
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_feedback_type ON feedback(feedback_type)")
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_license_keys ON license_keys(key_code)")
-
-        # Create indexes
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_install ON organizations(install)")
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_tickets_org ON tickets(install)")
         
         conn.commit()
         print("✅ Database initialized")
@@ -317,7 +321,7 @@ def increment_usage(install: str):
         conn.close()
 
 
-def validate_access_key(key_code: str) -> Optional[Dict]:
+def validate_access_key(key_code: str, install: str) -> Optional[Dict]:
     """Validate an access key and return org info"""
     if not DATABASE_URL:
         return None
@@ -346,8 +350,7 @@ def validate_access_key(key_code: str) -> Optional[Dict]:
         
         # If key hasn't been activated yet, create/update org
         if not key_data['activated_at']:
-            install = key_data['install'] or f"org_{key_code[:8]}"
-            
+                        
             # Create or update organization
             cur.execute("""
                 INSERT INTO organizations (install, plan, clarifications_limit, clarifications_used)
