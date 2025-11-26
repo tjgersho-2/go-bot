@@ -3,7 +3,7 @@ import Resolver from '@forge/resolver';
 const resolver = new Resolver();
 
 // Base API URL - use environment variable or hardcode
-const API_BASE_URL = 'https://go-bot-production.up.railway.app';
+const API_BASE_URL = 'https://jira-clarifier-production.up.railway.app';
 
 /**
  * Health check resolver (for testing)
