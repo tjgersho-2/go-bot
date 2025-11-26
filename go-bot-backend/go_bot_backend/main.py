@@ -131,6 +131,7 @@ class TicketInput(BaseModel):
     issueType: Optional[str] = Field(default="Task", description="Issue type (Bug, Task, Story)")
     priority: Optional[str] = Field(default="Medium", description="Priority level")
     install: Optional[str] = Field(default=None, description="Organization ID for auth")
+    accessKey: Optional[str] = Field(default=None, description="Licence Key")
     userId: Optional[str] = Field(default=None, description="User ID for rate limiting")
 
 class ClarifiedOutput(BaseModel):
@@ -296,98 +297,7 @@ if DATABASE_URL:
 # ============================================================================
 # User & Auth Helpers
 # ============================================================================
-
-def increment_usage(install: str):
-    """Increment clarification usage counter"""
-    if not DATABASE_URL or not install:
-        return
-    
-    conn = get_db_connection()
-    if not conn:
-        return
-    
-    try:
-        cur = conn.cursor()
-        cur.execute("""
-            UPDATE organizations 
-            SET clarifications_used = clarifications_used + 1,
-                updated_at = CURRENT_TIMESTAMP
-            WHERE install = %s
-        """, (install,))
-        conn.commit()
-    except Exception as e:
-        print(f"Error incrementing usage: {e}")
-    finally:
-        conn.close()
-
-
-def validate_access_key(key_code: str, install: str) -> Optional[Dict]:
-    """Validate an access key and return org info"""
-    if not DATABASE_URL:
-        return None
-    
-    conn = get_db_connection()
-    if not conn:
-        return None
-    
-    try:
-        cur = conn.cursor()
-        
-        # Check if key exists and is active
-        cur.execute("""
-            SELECT lk.*, o.plan, o.clarifications_used, o.clarifications_limit
-            FROM license_keys lk
-            LEFT JOIN organizations o ON lk.install = o.install
-            WHERE lk.key_code = %s 
-            AND lk.is_active = true
-            AND (lk.expires_at IS NULL OR lk.expires_at > NOW())
-        """, (key_code,))
-        
-        key_data = cur.fetchone()
-        
-        if not key_data:
-            return None
-        
-        # If key hasn't been activated yet, create/update org
-        if not key_data['activated_at']:
-                        
-            # Create or update organization
-            cur.execute("""
-                INSERT INTO organizations (install, plan, clarifications_limit, clarifications_used)
-                VALUES (%s, %s, %s, 0)
-                ON CONFLICT (install) 
-                DO UPDATE SET 
-                    plan = EXCLUDED.plan,
-                    clarifications_limit = EXCLUDED.clarifications_limit,
-                    updated_at = CURRENT_TIMESTAMP
-                RETURNING *
-            """, (install, key_data['plan'], RATE_LIMIT_PRO))
-            
-            # Update license key with install and activation time
-            cur.execute("""
-                UPDATE license_keys 
-                SET install = %s, activated_at = NOW()
-                WHERE key_code = %s
-            """, (install, key_code))
-            
-            conn.commit()
-            
-            # Fetch updated org data
-            cur.execute("SELECT * FROM organizations WHERE install = %s", (install,))
-            org_data = cur.fetchone()
-        else:
-            # Fetch existing org data
-            cur.execute("SELECT * FROM organizations WHERE install = %s", (key_data['install'],))
-            org_data = cur.fetchone()
-        
-        return dict(org_data) if org_data else None
-        
-    except Exception as e:
-        print(f"Error validating access key: {e}")
-        return None
-    finally:
-        conn.close()
-
+ 
 
 def store_feedback(feedback: FeedbackInput):
     """Store user feedback for model fine-tuning"""
@@ -688,7 +598,7 @@ async def clarify_ticket(ticket: TicketInput):
     """
     Clarify ticket and increment usage counter
     """
-    license_key = ticket.install or "free_user"
+    license_key = ticket.accessKey or "free_user"
     
     # For paid users, check and increment usage
     if license_key != "free_user":

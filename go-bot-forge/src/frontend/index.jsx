@@ -23,6 +23,7 @@ const App = () => {
     const context = useProductContext();
 
     const [clarifiedData, setClarifiedData] = useState(null);
+    const [codeImplementation, setCodeImplmentation] = useState(null);
     const [isAnalyzing, setAnalyzing] = useState(false);
     const [isLoading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -36,6 +37,17 @@ const App = () => {
     const [plan, setPlan] = useState('free');
     const [isValidatingKey, setValidatingKey] = useState(false);
     
+
+    const checkHealth = async () => {
+      try {
+          const results = await invoke('getHealth');
+          console.log('results');
+          console.log(results);
+      } catch (err) {
+          console.error('Results error', err);
+      }
+    };
+
     
     const extractDescription = (description) => {
         if (!description) return '';
@@ -183,14 +195,12 @@ const App = () => {
         setValidatingKey(true);
         setError(null);
         const result = await invoke('getKeyByInstall', { install: install });
-        console.log('Results..');
-        console.log(result);
-        if (result.valid) {
-            setInstall(result.install);
+        if (result.isActive) {
+            setInstall(install);
             setPlan(result.plan);
             setKeyModalOpen(false);
-            setAccessKey(result.key);
-            return result.key;
+            setAccessKey(result.keyCode);
+            return {install: install, accessKey: result.keyCode};
         } else {
             console.log("No key found by install.");
             return null;
@@ -204,12 +214,15 @@ const App = () => {
     }
 
 
-    const validateAccessKey = async (key) => {
+    const validateAccessKey = async (install, key) => {
         setValidatingKey(true);
         setError(null);
+
+        console.log("Validating Access Key");
+        console.log(key, install);
         
         try {
-            const result = await invoke('validateAccessKey', { accessKey: key });
+            const result = await invoke('validateAccessKey', { accessKey: key, install: install });
             
             if (result.valid) {
                 setInstall(result.install);
@@ -235,8 +248,7 @@ const App = () => {
             setError('Please enter an access key');
             return;
         }
-        
-        await validateAccessKey(accessKey.trim().toUpperCase());
+        await validateAccessKey(install, accessKey.trim().toUpperCase());
     };
 
     const clarifyTicket = async (ctx) => {
@@ -272,6 +284,33 @@ const App = () => {
         }
     };
 
+
+    const goBotCode = async (ctx) => {
+        if(issueDetails){
+            setAnalyzing(true);
+            setError(null);
+            setFeedbackSubmitted(false);
+            
+            try {
+                const result = await invoke('genCode', { 
+                    issueData: clarifiedData,
+                    install: install 
+                });
+                
+                if (result.error) {
+                  setError(result.error);
+                } else {
+                  setCodeImplmentation(result);
+                }
+            } catch (err) {
+                console.error('Invoke error:', err);
+                setError('Failed to generate code from the ticket. Please try again.');
+            } finally {
+                setAnalyzing(false);
+            }
+        }
+    };
+
     const submitFeedback = async (feedbackType) => {
         if (!clarifiedData || !issueDetails) return;
         
@@ -282,7 +321,6 @@ const App = () => {
                 feedbackType: feedbackType,
                 install: install || 'unknown'
             });
-            
             setFeedbackSubmitted(true);
         } catch (err) {
             console.error('Feedback error:', err);
@@ -304,6 +342,7 @@ const App = () => {
 
     const resetAnalysis = async () => {
       setClarifiedData(null);
+      setCodeImplmentation(null);
       setLoading(false);
       setAnalyzing(false);
       setError(null);
@@ -359,30 +398,12 @@ const App = () => {
                 <Text key={i}>• {scenario}</Text>
               ))}
             </Box>
-          ):<></>}
+          ):<></>}  
 
-          {/* Feedback buttons */}
-          {!feedbackSubmitted && !applied ? (
-            <Box>
-              <Text><Em>Was this helpful?</Em></Text>
-              <ButtonGroup>
-                <Button onClick={() => submitFeedback('upvote')}>
-                  👍 Yes
-                </Button>
-                <Button onClick={() => submitFeedback('downvote')}>
-                  👎 No
-                </Button>
-              </ButtonGroup>
-            </Box>
-          ) : feedbackSubmitted ? (
-            <SectionMessage appearance="confirmation">
-              <Text>Thank you for your feedback!</Text>
-            </SectionMessage>
-          ) : <></>}
-  
         </Box>
       );
     };
+
 
     const render_buttons = () =>{
       let initial = true;
@@ -391,76 +412,132 @@ const App = () => {
         applied = clarifiedData?.applied;
         initial = false;
       }
+      let coded = false;
+      if(codeImplementation){
+        coded = true;
+      }
 
       let jsx;
-    
-      if(applied){
-        jsx = <Button onClick={resetAnalysis}>Reset</Button>
-      }else{
-        if(!initial) {
+      
+      if(accessKey){
+          if(coded){
+            jsx = <ButtonGroup>
+                    <Button 
+                      onClick={applyToTicket}
+                      appearance="primary"
+                    >Save to Ticket</Button>
+                    <Button 
+                      onClick={goBotCode}
+                    >GoBot Code Again</Button>
+                    <Button onClick={resetAnalysis}>Reset</Button>
+                  </ButtonGroup>
+            if(!feedbackSubmitted){
+              jsx = <Box>
+                      <Text><Em>Scope clarification Good?</Em></Text>
+                      <ButtonGroup>
+                        <Button onClick={() => submitFeedback('upvote')}>
+                          👍 Yes
+                        </Button>
+                        <Button onClick={() => submitFeedback('downvote')}>
+                          👎 No
+                        </Button>
+                      </ButtonGroup>
+                    </Box>
+            }else{
+              jsx = <SectionMessage appearance="confirmation">
+                      <Text>Thank you for your feedback!</Text>
+                    </SectionMessage>
+            }
+          }else{
+            if(applied){
+              jsx = <Stack>
+                      <Text>
+                      <Em>Step 2. Transform scope to an initial AI implementation.</Em>
+                    </Text>
+                      <Button onClick={goBotCode} appearance="primary">GoBot Code!</Button>
+                      {!feedbackSubmitted ? 
+                          <Box>
+                            <Text><Em>Scope clarification Good?</Em></Text>
+                            <ButtonGroup>
+                              <Button onClick={() => submitFeedback('upvote')}>
+                                👍 Yes
+                              </Button>
+                              <Button onClick={() => submitFeedback('downvote')}>
+                                👎 No
+                              </Button>
+                            </ButtonGroup>
+                          </Box>
+                        : <SectionMessage appearance="confirmation">
+                            <Text>Thank you for your feedback!</Text>
+                          </SectionMessage>
+                      }
+                    </Stack>
+            }else{
+              if(!initial) {
+                jsx = <ButtonGroup>
+                        <Button 
+                          onClick={applyToTicket}
+                          appearance="primary"
+                        >Apply to Ticket</Button>
+                        <Button 
+                          onClick={clarifyTicket}
+                        >GoBot Again</Button>
+                      </ButtonGroup>
+              } else {
+
+                jsx = <Stack> 
+                      <Text>
+                        <Em>Step 1. Transform tickets into crystal-clear scope.</Em>
+                      </Text>
+
+                      <Button onClick={clarifyTicket} appearance="primary">GoBot</Button>
+                   </Stack>
+              }
+            }
+          }
+        }else{
           jsx = <ButtonGroup>
-                  <Button 
-                    onClick={applyToTicket}
-                    appearance="primary"
-                  >Apply to Ticket</Button>
-                  <Button 
-                    onClick={clarifyTicket}
-                  >Go Bot Again</Button>
+                  <Button onClick={() => setKeyModalOpen(true)} appearance="link">
+                    Enter Access Key
+                  </Button>
+                  <Button onClick={() => checkOnAccessKey(install)} appearance="link">
+                    Check Key
+                  </Button>
                 </ButtonGroup>
-        } else {
-          jsx = <Button 
-                  onClick={clarifyTicket}
-                  appearance="primary"
-                >Go Bot</Button>
         }
-      }
-      return (
-      <Box>
-        {jsx}
-        {/* Show access key link if no org */}
-        {!install ? (
-          <ButtonGroup>
-          <Button onClick={() => setKeyModalOpen(true)} appearance="link">
-            Enter Access Key
-          </Button>
-          <Button onClick={() => checkOnAccessKey(install)} appearance="link">
-            Check Key: (Install: {install})
-          </Button>
-          </ButtonGroup>
-        ) : (
-          <Text><Em>Plan: {plan}</Em></Text>
-        )}
-      </Box>);
+
+      console.log(jsx);
+      return (  
+          <Box>
+            <Text><Em>Plan: {plan}</Em></Text>
+            {jsx}
+          </Box>
+       );
     }
 
- React.useEffect(async () => {
+ React.useEffect(() => {
    if (context) {
     const issueId = context?.extension.issue.id;
 
-    // if(install != context?.accountId){   
-    //   setInstall(context?.accountId);  
-    // } 
+    if(install != context?.accountId){   
+      setInstall(context?.accountId);  
+    } 
     console.log("Account");
     console.log(context?.accountId);
-    // checkOnAccessKey(context?.accountId).then((key) => {
-    //   if (key){
-    //     validateAccessKey(key)
-    //   }
-    // });
+    console.log(issueId);
+    checkOnAccessKey(context?.accountId).then((keyInfo) => {
+      if (keyInfo){
+        validateAccessKey(context?.accountId, keyInfo.accessKey)
+      }
+    });
     getIssueData(issueId).then(setIssueDetails);
+    checkHealth();
    }
  }, [context]);
 
 
  return (
     <Box>
- 
-      <Stack>
-        <Text>
-          <Em>Transform tickets into crystal-clear scope with initial AI implementation.</Em>
-        </Text>
-      </Stack>
-
       {/* Access Key Modal */}
       <ModalTransition>
         {isKeyModalOpen && (
@@ -536,6 +613,7 @@ const App = () => {
   </Box>
  );
 };
+
 
 ForgeReconciler.render(
  <React.StrictMode>

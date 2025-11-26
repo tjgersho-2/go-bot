@@ -8,7 +8,7 @@ const API_BASE_URL = 'https://jira-clarifier-production.up.railway.app';
 /**
  * Health check resolver (for testing)
  */
-resolver.define('getText', async (req) => {
+resolver.define('getHealth', async (req) => {
   try{
     const response = await fetch(`${API_BASE_URL}/health`);
     if (!response.ok) {
@@ -98,11 +98,60 @@ resolver.define('clarifyIssue', async ({ payload }) => {
   }
 });
 
+
+/**
+ * Call the AI clarification service
+ */
+const callCodeGenAPI = async (issueData, install) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/gen-code`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        title: issueData.title,
+        description: issueData.description,
+        issueType: issueData.issueType,
+        priority: issueData.priority,
+        install: install || 'unknown'
+      })
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || `API request failed: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+
+resolver.define('genCode', async ({ payload }) => {
+  const { issueData, install } = payload;
+  
+  try {
+    // Call AI service with orgId for rate limiting
+    const clarifiedData = await callCodeGenAPI(issueData, install);
+    return clarifiedData;
+  } catch (error) {
+    return {
+      error: error.message || 'Failed to generate code for ticket. Please try again or contact support.'
+    };
+  }
+});
+
+ 
+
 /**
  * Validate access key
  */
 resolver.define('validateAccessKey', async ({ payload }) => {
-  const { accessKey } = payload;
+  const { accessKey, install } = payload;
   
   try {
     const response = await fetch(`${API_BASE_URL}/validate-key`, {
@@ -111,7 +160,8 @@ resolver.define('validateAccessKey', async ({ payload }) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        accessKey: accessKey
+        accessKey: accessKey,
+        install: install
       })
     });
     
