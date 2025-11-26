@@ -27,6 +27,7 @@ resolver.define('getText', async (req) => {
  * Health check resolver (for testing)
  */
 resolver.define('getKeyByInstall', async ({ payload }) => {
+  try{
     const { install } = payload;
     const response = await fetch(`${API_BASE_URL}/find-key-by-install`, {
       method: 'POST',
@@ -39,10 +40,13 @@ resolver.define('getKeyByInstall', async ({ payload }) => {
      }
     );
     if (!response.ok) {
-      throw new Error(`API request failed: ${response.status}`);
+      return response;
     }
     const data = await response.json();
     return data;
+  }catch(e){
+    return e;
+  }
 });
 
  

@@ -419,9 +419,14 @@ const App = () => {
         {jsx}
         {/* Show access key link if no org */}
         {!install ? (
+          <ButtonGroup>
           <Button onClick={() => setKeyModalOpen(true)} appearance="link">
             Enter Access Key
           </Button>
+          <Button onClick={() => checkOnAccessKey(install)} appearance="link">
+            Check Key: (Install: {install})
+          </Button>
+          </ButtonGroup>
         ) : (
           <Text><Em>Plan: {plan}</Em></Text>
         )}
@@ -437,11 +442,11 @@ const App = () => {
     // } 
     console.log("Account");
     console.log(context?.accountId);
-    checkOnAccessKey(context?.accountId).then((key) => {
-      if (key){
-        validateAccessKey(key)
-      }
-    });
+    // checkOnAccessKey(context?.accountId).then((key) => {
+    //   if (key){
+    //     validateAccessKey(key)
+    //   }
+    // });
     getIssueData(issueId).then(setIssueDetails);
    }
  }, [context]);
