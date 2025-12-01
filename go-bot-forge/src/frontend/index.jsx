@@ -28,6 +28,7 @@ const App = () => {
     const [codeImplementation, setCodeImplementation] = useState(null);
     const [isAnalyzing, setAnalyzing] = useState(false);
     const [isLoading, setLoading] = useState(false);
+    const [isInitializing, setInitializing] = useState(true); // New: for initial load
     const [error, setError] = useState(null);
     const [issueDetails, setIssueDetails] = useState(null);
     const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
@@ -213,7 +214,6 @@ const App = () => {
         console.error(e);
       } finally {
         setValidatingKey(false);
-  
       }
     }
 
@@ -346,12 +346,21 @@ const App = () => {
                     clarifiedData, 
                     issueDetails?.description || ''
                 );
-                
+                const issueData = {
+                    title: issueDetails?.title || '',
+                    description: formattedDescription
+                }
+                const jiraDescription = `# ${issueData.title || 'Untitled'}\n\n${issueData.description || ''}`;
+                console.log("Jira Description for genCode:");
+                console.log(jiraDescription);
+                console.log(issueData);
+                console.log("-----------")
+                console.log("Custom Prompt:");
+                console.log(codeGenCustomPrompt);
+                console.log(install);
+                console.log(accessKey)
                 const result = await invoke('genCode', { 
-                    issueData: {
-                        title: issueDetails?.title || '',
-                        description: formattedDescription
-                    },
+                    issueData:issueData,
                     install: install,
                     customPrompt: codeGenCustomPrompt || '',
                     accessKey: accessKey
@@ -526,8 +535,53 @@ const App = () => {
       );
     };
 
+    // Loading state renderer
+    const renderLoadingState = () => {
+      if (isInitializing) {
+        return (
+          <Box>
+            <Text>🔄 Loading GoBot...</Text>
+          </Box>
+        );
+      }
+      
+      if (isAnalyzing) {
+        return (
+          <Box>
+            <Text>⏳ {codeImplementation || clarifiedData?.applied ? 'Generating code' : 'Analyzing ticket'}...</Text>
+            <Text><Em>This can take up to 60 seconds...</Em></Text>
+          </Box>
+        );
+      }
+      
+      if (isLoading) {
+        return (
+          <Box>
+            <Text>⏳ Saving to ticket description...</Text>
+          </Box>
+        );
+      }
+      
+      if (isValidatingKey) {
+        return (
+          <Box>
+            <Text>🔑 Validating access key...</Text>
+          </Box>
+        );
+      }
+      
+      return null;
+    };
 
-    const render_buttons = () =>{
+    // Check if any loading state is active
+    const isAnyLoading = isInitializing || isAnalyzing || isLoading || isValidatingKey;
+
+    const render_buttons = () => {
+      // Don't render buttons during any loading state
+      if (isAnyLoading) {
+        return null;
+      }
+
       let initial = true;
       let applied = false;
       if (clarifiedData) {
@@ -543,19 +597,63 @@ const App = () => {
       
       if(accessKey){
           if( coded ) {
-            jsx = <ButtonGroup>
-                    <Button 
-                      onClick={applyToTicket}
-                      appearance="primary"
-                    >Save to Ticket</Button>
-                    <Button 
-                      onClick={goBotCode}
-                    >GoBot Code Again</Button>
-                    <Button onClick={resetAnalysis}>Reset</Button>
-                  </ButtonGroup>
-            if(!feedbackSubmitted){
-              jsx = <Box>
-                      <Text><Em>Scope clarification Good?</Em></Text>
+            jsx = (
+              <Box>
+                <ButtonGroup>
+                  <Button 
+                    onClick={applyToTicket}
+                    appearance="primary"
+                  >Save to Ticket</Button>
+                  <Button 
+                    onClick={goBotCode}
+                  >GoBot Code Again</Button>
+                  <Button onClick={resetAnalysis}>Reset</Button>
+                </ButtonGroup>
+                {!feedbackSubmitted ? (
+                  <Box>
+                    <Text><Em>Code generation good?</Em></Text>
+                    <ButtonGroup>
+                      <Button onClick={() => submitFeedback('upvote')}>
+                        👍 Yes
+                      </Button>
+                      <Button onClick={() => submitFeedback('downvote')}>
+                        👎 No
+                      </Button>
+                    </ButtonGroup>
+                  </Box>
+                ) : (
+                  <SectionMessage appearance="confirmation">
+                    <Text>Thank you for your feedback!</Text>
+                  </SectionMessage>
+                )}
+              </Box>
+            );
+          } else {
+            if(applied){
+              jsx = (
+                <Box>
+                  <Text>
+                    <Em>Step 2. Transform scope to an initial AI implementation.</Em>
+                  </Text>
+                  {showCustomPromptForm ? (
+                    <Box>
+                      <Label labelFor="codeGenCustomPrompt">Custom Prompt:</Label>
+                      <TextArea 
+                          id="codeGenCustomPrompt"
+                          name="codeGenCustomPrompt"
+                          placeholder="e.g. Build with Python"
+                          value={codeGenCustomPrompt}
+                          onChange={(e) => {setCodeGenCustomPrompt(e.target.value)}}
+                      />
+                      <Button onClick={() => setShowCustomPromptForm(false)}>Clear</Button>
+                    </Box>
+                  ) : (
+                    <Button onClick={() => setShowCustomPromptForm(true)}>Custom Prompt</Button>
+                  )}
+                  <Button onClick={goBotCode} appearance="primary">GoBot Code!</Button>
+                  {!feedbackSubmitted ? (
+                    <Box>
+                      <Text><Em>Scope clarification good?</Em></Text>
                       <ButtonGroup>
                         <Button onClick={() => submitFeedback('upvote')}>
                           👍 Yes
@@ -565,127 +663,68 @@ const App = () => {
                         </Button>
                       </ButtonGroup>
                     </Box>
-            }else{
-              jsx = <SectionMessage appearance="confirmation">
+                  ) : (
+                    <SectionMessage appearance="confirmation">
                       <Text>Thank you for your feedback!</Text>
                     </SectionMessage>
-            }
-          } else {
-            if(applied){
-              jsx = <Box>
-                      <Text>
-                        <Em>Step 2. Transform scope to an initial AI implementation.</Em>
-                      </Text>
-                      {showCustomPromptForm ? 
-                          <Form onSubmit={handleKeySubmit}>
-                            <Label labelFor="codeGenCustomPrompt">Custom Prompt:</Label>
-                            <TextArea 
-                                id="codeGenCustomPrompt"
-                                name="codeGenCustomPrompt"
-                                label="Custom Prompt"
-                                placeholder="e.g. Build with Python"
-                                value={codeGenCustomPrompt}
-                                onChange={(e) => {setCodeGenCustomPrompt(e.target.value)} }
-                            />
-                            <Button onClick={()=>{
-                              if(showCustomPromptForm){
-                                setShowCustomPromptForm(false);
-                              }else{
-                                setShowCustomPromptForm(true);
-                              }
-                            }}>Clear</Button>
-                          </Form> 
-                          :
-                          <Button onClick={()=>{
-                            if(showCustomPromptForm){
-                              setShowCustomPromptForm(false);
-                            }else{
-                              setShowCustomPromptForm(true);
-                            }
-                          }}>Custom Prompt</Button>
-                        }
-                      <Button onClick={goBotCode} appearance="primary">GoBot Code!</Button>
-                      {!feedbackSubmitted ? 
-                          <Box>
-                            <Text><Em>Scope clarification Good?</Em></Text>
-                            <ButtonGroup>
-                              <Button onClick={() => submitFeedback('upvote')}>
-                                👍 Yes
-                              </Button>
-                              <Button onClick={() => submitFeedback('downvote')}>
-                                👎 No
-                              </Button>
-                            </ButtonGroup>
-                          </Box>
-                        : <SectionMessage appearance="confirmation">
-                            <Text>Thank you for your feedback!</Text>
-                          </SectionMessage>
-                      }
-                    </Box>
+                  )}
+                </Box>
+              );
             } else {
               if(!initial) {
-                jsx = <ButtonGroup>
-                        <Button 
-                          onClick={applyToTicket}
-                          appearance="primary"
-                        >Apply to Ticket</Button>
-                        <Button 
-                          onClick={clarifyTicket}
-                        >GoBot Again</Button>
-                      </ButtonGroup>
+                jsx = (
+                  <ButtonGroup>
+                    <Button 
+                      onClick={applyToTicket}
+                      appearance="primary"
+                    >Apply to Ticket</Button>
+                    <Button 
+                      onClick={clarifyTicket}
+                    >GoBot Again</Button>
+                  </ButtonGroup>
+                );
               } else {
-                jsx = <Box> 
-                      <Text>
-                        <Em>Step 1. Transform tickets into crystal-clear scope.</Em>
-                      </Text>
-                      {showCustomPromptForm ? 
-                          <Form onSubmit={handleKeySubmit}>
-                            <Label labelFor="clarifyCustomPrompt">Custom Prompt:</Label>
-                            <TextArea 
-                                name="clarifyCustomPrompt"
-                                label="Custom Prompt"
-                                placeholder="e.g. Satisfy with Python"
-                                value={clarifyCustomPrompt}
-                                onChange={(e) => {setClarifyCustomPrompt(e.target.value)} }
-                            />
-                            <Button onClick={()=>{
-                              if(showCustomPromptForm){
-                                setShowCustomPromptForm(false);
-                              }else{
-                                setShowCustomPromptForm(true);
-                              }
-                            }}>Clear</Button>
-                          </Form> 
-                          :
-                          <Button onClick={()=>{
-                            if(showCustomPromptForm){
-                              setShowCustomPromptForm(false);
-                            }else{
-                              setShowCustomPromptForm(true);
-                            }
-                          }}>Custom Prompt</Button>
-                        }
-                      <Button onClick={clarifyTicket} appearance="primary">GoBot</Button>
-                   </Box>
+                jsx = (
+                  <Box> 
+                    <Text>
+                      <Em>Step 1. Transform tickets into crystal-clear scope.</Em>
+                    </Text>
+                    {showCustomPromptForm ? (
+                      <Box>
+                        <Label labelFor="clarifyCustomPrompt">Custom Prompt:</Label>
+                        <TextArea 
+                            id="clarifyCustomPrompt"
+                            name="clarifyCustomPrompt"
+                            placeholder="e.g. Focus on security requirements"
+                            value={clarifyCustomPrompt}
+                            onChange={(e) => {setClarifyCustomPrompt(e.target.value)}}
+                        />
+                        <Button onClick={() => setShowCustomPromptForm(false)}>Clear</Button>
+                      </Box>
+                    ) : (
+                      <Button onClick={() => setShowCustomPromptForm(true)}>Custom Prompt</Button>
+                    )}
+                    <Button onClick={clarifyTicket} appearance="primary">GoBot</Button>
+                  </Box>
+                );
               }
             }
           }
-        }else{
-          jsx = <ButtonGroup>
-                  <Button onClick={() => setKeyModalOpen(true)} appearance="link">
-                    Enter Access Key
-                  </Button>
-                  <Button onClick={() => checkOnAccessKey(install)} appearance="link">
-                    Check Key
-                  </Button>
-                </ButtonGroup>
+        } else {
+          jsx = (
+            <ButtonGroup>
+              <Button onClick={() => setKeyModalOpen(true)} appearance="primary">
+                Enter Access Key
+              </Button>
+            </ButtonGroup>
+          );
         }
- 
+
       return (  
-          <Box>
-            {jsx}
-          </Box>
-       );
+        <Box>
+          {jsx}
+        </Box>
+      );
     }
 
  React.useEffect(() => {
@@ -698,13 +737,25 @@ const App = () => {
     console.log("Account");
     console.log(context?.accountId);
     console.log(issueId);
-    checkOnAccessKey(context?.accountId).then((keyInfo) => {
-      if (keyInfo){
-        validateAccessKey(context?.accountId, keyInfo.accessKey)
+    
+    // Initialize app
+    const initializeApp = async () => {
+      setInitializing(true);
+      try {
+        const keyInfo = await checkOnAccessKey(context?.accountId);
+        if (keyInfo) {
+          await validateAccessKey(context?.accountId, keyInfo.accessKey);
+        }
+        await getIssueData(issueId).then(setIssueDetails);
+        await checkHealth();
+      } catch (err) {
+        console.error('Initialization error:', err);
+      } finally {
+        setInitializing(false);
       }
-    });
-    getIssueData(issueId).then(setIssueDetails);
-    checkHealth();
+    };
+    
+    initializeApp();
    }
  }, [context]);
 
@@ -727,7 +778,7 @@ const App = () => {
                     label="Access Key"
                     placeholder="JIRA-XXXX-XXXX-XXXX"
                     value={accessKey}
-                    onChange={(e) => {setAccessKey(e.target.value)} }
+                    onChange={(e) => {setAccessKey(e.target.value)}}
                 />
                 
                 <ButtonGroup>
@@ -756,33 +807,30 @@ const App = () => {
         )}
       </ModalTransition>
     
-    {error ? 
-        (  
+      {/* Error message */}
+      {error && !isAnyLoading && (  
         <SectionMessage title="Error" appearance="error">
           <Text>{error}</Text>
         </SectionMessage>
-        ) : <></>
-    }
+      )}
  
-    {isAnalyzing ? (
-       <Box>
-        <Text>⏳ Analyzing ticket...<Em>This can take 30 seconds...</Em></Text>
-       </Box>
-    ) : <></>}
+      {/* Loading states */}
+      {renderLoadingState()}
 
-    {isLoading ? (
-       <Box>
-        <Text>⏳ Saving to ticket Description...</Text>
-       </Box>
-    ) : <></>}
+      {/* User actions - only shown when not loading */}
+      {render_buttons()}
 
-    {render_buttons()}
-
-    {renderClarifiedContent()}
-    {renderCodeOutput()}
-
-    <Text><Em>Plan: {plan}</Em></Text>
-  </Box>
+      {/* Content - only shown when not loading */}
+      {!isAnyLoading && (
+        <>
+          {renderClarifiedContent()}
+          {renderCodeOutput()}
+        </>
+      )}
+      {!isAnyLoading && (
+            <Text><Em>Plan: {plan}</Em></Text>
+      )}
+    </Box>
  );
 };
 

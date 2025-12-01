@@ -114,10 +114,7 @@ resolver.define('clarifyIssue', async ({ payload }) => {
  */
 resolver.define('genCode', async ({ payload }) => {
   const { issueData, install, customPrompt, accessKey } = payload;
-  
-  console.log('🚀 Generating code for:', issueData?.title || 'Unknown ticket');
-  console.log('📝 Custom prompt:', customPrompt || 'None');
-  
+
   try {
       // Combine title and description into jiraDescription
       // The description already contains the clarified data (acceptance criteria, edge cases, etc.)
@@ -158,9 +155,8 @@ resolver.define('genCode', async ({ payload }) => {
       return result;
       
   } catch (error) {
-      console.error('❌ genCode error:', error);
       return { 
-          error: 'Failed to generate code. Please try again.' 
+          error: `Failed to generate code. Please try again. ${error}` 
       };
   }
 }, { runAsync: true });
