@@ -98,7 +98,7 @@ resolver.define('clarifyIssue', async ({ payload }) => {
       error: error.message || 'Failed to clarify ticket. Please try again or contact support.'
     };
   }
-});
+}, { runAsync: true });
 
  
 /**
@@ -112,7 +112,7 @@ resolver.define('clarifyIssue', async ({ payload }) => {
  * - install - Installation/organization ID
  * - accessKey - License key for auth
  */
-resolver.define('genCode', async ({ payload, context }) => {
+resolver.define('genCode', async ({ payload }) => {
   const { issueData, install, customPrompt, accessKey } = payload;
   
   console.log('🚀 Generating code for:', issueData?.title || 'Unknown ticket');
@@ -131,8 +131,7 @@ resolver.define('genCode', async ({ payload, context }) => {
           accessKey: accessKey || null
       };
       
-      console.log('📤 Sending request to /gen-code');
-      
+ 
       const response = await fetch(`${API_BASE_URL}/gen-code`, {
           method: 'POST',
           headers: {
@@ -142,9 +141,7 @@ resolver.define('genCode', async ({ payload, context }) => {
       });
       
       if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          console.error('❌ API error:', response.status, errorData);
-          
+          const errorData = await response.json().catch(() => ({}));          
           // Handle rate limiting
           if (response.status === 429) {
               return { 
@@ -158,11 +155,6 @@ resolver.define('genCode', async ({ payload, context }) => {
       }
       
       const result = await response.json();
-      
-      console.log('✅ Code generated successfully');
-      console.log(`📁 Files: ${result.files?.length || 0}`);
-      console.log(`⏱️ Processing time: ${result.processingTime}s`);
-      
       return result;
       
   } catch (error) {
@@ -171,7 +163,7 @@ resolver.define('genCode', async ({ payload, context }) => {
           error: 'Failed to generate code. Please try again.' 
       };
   }
-});
+}, { runAsync: true });
 
  
 

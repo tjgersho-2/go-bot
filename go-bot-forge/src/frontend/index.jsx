@@ -25,7 +25,7 @@ const App = () => {
     const context = useProductContext();
 
     const [clarifiedData, setClarifiedData] = useState(null);
-    const [codeImplementation, setCodeImplmentation] = useState(null);
+    const [codeImplementation, setCodeImplementation] = useState(null);
     const [isAnalyzing, setAnalyzing] = useState(false);
     const [isLoading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -353,14 +353,17 @@ const App = () => {
                         description: formattedDescription
                     },
                     install: install,
-                    customPrompt: customPrompt || '',
+                    customPrompt: codeGenCustomPrompt || '',
                     accessKey: accessKey
                 });
+
+                console.log("Result from GenCode..");
+                console.log(result);
                 
                 if (result.error) {
                     setError(result.error);
                 } else {
-                    setCodeImplmentation(result);
+                    setCodeImplementation(result);
                 }
             } catch (err) {
                 console.error('Invoke error:', err);
@@ -373,7 +376,6 @@ const App = () => {
 
     const submitFeedback = async (feedbackType) => {
         if (!clarifiedData || !issueDetails) return;
-        
         try {
             await invoke('submitFeedback', {
                 ticketData: issueDetails,
@@ -402,7 +404,7 @@ const App = () => {
 
     const resetAnalysis = async () => {
       setClarifiedData(null);
-      setCodeImplmentation(null);
+      setCodeImplementation(null);
       setLoading(false);
       setAnalyzing(false);
       setClarifyCustomPrompt(null);
@@ -417,7 +419,7 @@ const App = () => {
         if (!codeImplementation) return null;
         
         const { files, summary, techStack, setupInstructions, nextSteps } = codeImplementation;
-        
+        console.log(codeImplementation);
         return (
             <Box>
                 {summary && (
@@ -766,10 +768,7 @@ const App = () => {
  
     {isAnalyzing ? (
        <Box>
-        <Text>⏳ Analyzing ticket...</Text>
-        <Text>
-            <Em>This can take 30 seconds...</Em>
-        </Text>
+        <Text>⏳ Analyzing ticket...<Em>This can take 30 seconds...</Em></Text>
        </Box>
     ) : <></>}
 
@@ -782,7 +781,7 @@ const App = () => {
     {render_buttons()}
 
     {renderClarifiedContent()}
-
+    {renderCodeOutput()}
   </Box>
  );
 };

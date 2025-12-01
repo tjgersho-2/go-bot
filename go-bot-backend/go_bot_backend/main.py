@@ -874,7 +874,9 @@ async def generate_code_endpoint(input: CodeGenInput):
     - Suggested next steps
     """
     license_key = input.accessKey or "free_user"
-    
+    print("LICENCE KEY: ")
+    print(license_key)
+
     # For paid users, check and increment usage
     if license_key != "free_user":
         conn = get_db_connection()
