@@ -53,7 +53,7 @@ resolver.define('getKeyByInstall', async ({ payload }) => {
 /**
  * Call the AI clarification service
  */
-const callClarificationAPI = async (issueData, install) => {
+const callClarificationAPI = async (issueData, customPrompt, install, accessKey) => {
   try {
     const response = await fetch(`${API_BASE_URL}/clarify`, {
       method: 'POST',
@@ -65,7 +65,9 @@ const callClarificationAPI = async (issueData, install) => {
         description: issueData.description,
         issueType: issueData.issueType,
         priority: issueData.priority,
-        install: install || 'unknown'
+        customPrompt: customPrompt || '',
+        install: install || 'unknown',
+        accessKey
       })
     });
     
@@ -85,11 +87,11 @@ const callClarificationAPI = async (issueData, install) => {
  * Resolver function for clarifying an issue
  */
 resolver.define('clarifyIssue', async ({ payload }) => {
-  const { issueData, install } = payload;
+  const { issueData, customPrompt, install, accessKey } = payload;
   
   try {
     // Call AI service with orgId for rate limiting
-    const clarifiedData = await callClarificationAPI(issueData, install);
+    const clarifiedData = await callClarificationAPI(issueData, customPrompt, install, accessKey);
     return clarifiedData;
   } catch (error) {
     return {
@@ -98,50 +100,76 @@ resolver.define('clarifyIssue', async ({ payload }) => {
   }
 });
 
-
+ 
 /**
- * Call the AI clarification service
+ * Generate code from clarified ticket data
+ * This is Step 2 of the GoBot workflow
+ * 
+ * Frontend sends:
+ * - issueData.title - The ticket title
+ * - issueData.description - The full ticket description (already contains clarified data from Step 1)
+ * - customPrompt - Optional custom instructions (e.g., "Use Python", "Include TypeScript types")
+ * - install - Installation/organization ID
+ * - accessKey - License key for auth
  */
-const callCodeGenAPI = async (issueData, install) => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/gen-code`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        title: issueData.title,
-        description: issueData.description,
-        issueType: issueData.issueType,
-        priority: issueData.priority,
-        install: install || 'unknown'
-      })
-    });
-    
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || `API request failed: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    throw error;
-  }
-};
-
-
-resolver.define('genCode', async ({ payload }) => {
-  const { issueData, install } = payload;
+resolver.define('genCode', async ({ payload, context }) => {
+  const { issueData, install, customPrompt, accessKey } = payload;
+  
+  console.log('🚀 Generating code for:', issueData?.title || 'Unknown ticket');
+  console.log('📝 Custom prompt:', customPrompt || 'None');
   
   try {
-    // Call AI service with orgId for rate limiting
-    const clarifiedData = await callCodeGenAPI(issueData, install);
-    return clarifiedData;
+      // Combine title and description into jiraDescription
+      // The description already contains the clarified data (acceptance criteria, edge cases, etc.)
+      // since the user applied it to the ticket in Step 1
+      const jiraDescription = `# ${issueData.title || 'Untitled'}\n\n${issueData.description || ''}`;
+      
+      const requestBody = {
+          jiraDescription: jiraDescription,
+          customPrompt: customPrompt || '',
+          install: install,
+          accessKey: accessKey || null
+      };
+      
+      console.log('📤 Sending request to /gen-code');
+      
+      const response = await fetch(`${API_BASE_URL}/gen-code`, {
+          method: 'POST',
+          headers: {
+              'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(requestBody)
+      });
+      
+      if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          console.error('❌ API error:', response.status, errorData);
+          
+          // Handle rate limiting
+          if (response.status === 429) {
+              return { 
+                  error: errorData.detail || 'Monthly usage limit reached. Please upgrade your plan.' 
+              };
+          }
+          
+          return { 
+              error: errorData.detail || `Code generation failed: ${response.status}` 
+          };
+      }
+      
+      const result = await response.json();
+      
+      console.log('✅ Code generated successfully');
+      console.log(`📁 Files: ${result.files?.length || 0}`);
+      console.log(`⏱️ Processing time: ${result.processingTime}s`);
+      
+      return result;
+      
   } catch (error) {
-    return {
-      error: error.message || 'Failed to generate code for ticket. Please try again or contact support.'
-    };
+      console.error('❌ genCode error:', error);
+      return { 
+          error: 'Failed to generate code. Please try again.' 
+      };
   }
 });
 

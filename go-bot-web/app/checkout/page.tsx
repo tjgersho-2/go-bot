@@ -378,7 +378,7 @@ export default function CheckoutPage() {
             <div className="flex gap-6 text-sm">
               <a href="/terms" className="text-slate-400 hover:text-white transition">Terms</a>
               <a href="/privacy" className="text-slate-400 hover:text-white transition">Privacy</a>
-              <a href="mailto:support@gobot.dev" className="text-slate-400 hover:text-white transition">Support</a>
+              <a href="/support" className="text-slate-400 hover:text-white transition">Support</a>
             </div>
           </div>
         </div>

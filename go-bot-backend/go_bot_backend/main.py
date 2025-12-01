@@ -125,14 +125,45 @@ app.add_middleware(
 # Models
 # ============================================================================
 
+class CodeGenInput(BaseModel):
+    """Input for code generation endpoint"""
+    # Clarified ticket description from Step 1 (already applied to Jira)
+    jiraDescription: str = Field(..., description="Full clarified ticket description from Jira")
+
+    # Custom prompt for guidance
+    customPrompt: str = Field(default="", description="Custom prompt for code generation (e.g., 'Use Python', 'Include TypeScript types')")
+    
+    # Auth
+    install: Optional[str] = Field(default=None, description="Organization ID for auth")
+    accessKey: Optional[str] = Field(default=None, description="License Key")
+
+
+class CodeFile(BaseModel):
+    """A single generated code file"""
+    filename: str = Field(..., description="Filename with extension")
+    language: str = Field(..., description="Programming language")
+    code: str = Field(..., description="The generated code")
+    description: str = Field(default="", description="Brief description of what this file does")
+
+
+class CodeGenOutput(BaseModel):
+    """Output from code generation"""
+    files: List[CodeFile] = Field(default_factory=list, description="Generated code files")
+    summary: str = Field(default="", description="Summary of the implementation")
+    techStack: List[str] = Field(default_factory=list, description="Technologies/frameworks used")
+    setupInstructions: List[str] = Field(default_factory=list, description="How to run/setup the code")
+    nextSteps: List[str] = Field(default_factory=list, description="Suggested next steps for the developer")
+    processingTime: Optional[float] = Field(default=None, description="Processing time in seconds")
+
+
 class TicketInput(BaseModel):
     title: str = Field(..., description="Jira ticket title")
     description: str = Field(default="", description="Jira ticket description")
+    customPrompt: str = Field(default="", description="Custom Prompt for the ticket clarification step.")
     issueType: Optional[str] = Field(default="Task", description="Issue type (Bug, Task, Story)")
     priority: Optional[str] = Field(default="Medium", description="Priority level")
     install: Optional[str] = Field(default=None, description="Organization ID for auth")
     accessKey: Optional[str] = Field(default=None, description="Licence Key")
-    userId: Optional[str] = Field(default=None, description="User ID for rate limiting")
 
 class ClarifiedOutput(BaseModel):
     acceptanceCriteria: List[str] = Field(default_factory=list)
@@ -447,6 +478,186 @@ async def get_similar_tickets(description: str, install: str) -> List[Dict]:
         print(f"RAG error: {e}")
         return []
 
+
+
+
+async def generate_code(input: CodeGenInput) -> CodeGenOutput:
+    """Generate MVP code implementation using Claude AI"""
+    start_time = datetime.now()
+    
+    if not app.state.claude:
+        raise HTTPException(status_code=500, detail="AI service not configured")
+    
+    # Build the prompt
+    prompt = f"""You are a senior software engineer tasked with generating a clean, well-documented MVP implementation based on a clarified Jira ticket.
+
+## Clarified Jira Ticket Description
+
+{input.jiraDescription}
+
+{f"## Custom Instructions{chr(10)}{input.customPrompt}" if input.customPrompt else ""}
+
+## Your Task
+
+Generate a **minimal viable implementation** that:
+1. Satisfies all the acceptance criteria in the ticket
+2. Handles the identified edge cases with appropriate error handling
+3. Considers the success metrics when designing the solution
+4. Can be validated against the test scenarios
+5. Is well-structured and follows best practices
+
+## Code Requirements
+
+Include **extensive comments** explaining:
+- What each section/function does
+- Why certain decisions were made
+- How it maps to the acceptance criteria
+- Where edge cases are handled
+- Suggestions for future improvements (as TODO comments)
+
+## Code Style Guidelines
+- Write clean, readable code with meaningful variable/function names
+- Add a file header comment explaining the purpose
+- Include inline comments for complex logic
+- Use docstrings/JSDoc for functions
+- Keep functions small and focused
+- Handle errors gracefully with informative messages
+
+## Response Format
+
+Respond with valid JSON in this exact structure:
+{{
+  "files": [
+    {{
+      "filename": "example.py",
+      "language": "python",
+      "code": "# Full code with comments here...",
+      "description": "Brief description of this file's purpose"
+    }}
+  ],
+  "summary": "2-3 sentence summary of what was implemented and the approach taken",
+  "techStack": ["language", "framework", "libraries used"],
+  "setupInstructions": [
+    "Step 1: Install dependencies...",
+    "Step 2: Configure...",
+    "Step 3: Run..."
+  ],
+  "nextSteps": [
+    "Add unit tests for...",
+    "Implement additional feature...",
+    "Consider adding..."
+  ]
+}}
+
+## Important Notes
+- Generate working, runnable code (not pseudocode)
+- If multiple files are needed, include all of them
+- Include any necessary configuration files (e.g., requirements.txt, package.json)
+- The code should be a solid MVP foundation that can be extended
+- Prioritize clarity and maintainability over cleverness
+
+Now generate the MVP implementation:"""
+
+    try:
+        # Call Claude API with extended token limit for code generation
+        message = app.state.claude.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=8000,
+            messages=[
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ]
+        )
+        
+        # Parse response
+        content = message.content[0].text
+        
+        # Handle potential markdown code blocks
+        if '```json' in content:
+            content = content.split('```json')[1].split('```')[0].strip()
+        elif '```' in content:
+            parts = content.split('```')
+            for part in parts:
+                part = part.strip()
+                if part.startswith('{'):
+                    content = part
+                    break
+        
+        parsed = json.loads(content)
+        
+        # Calculate processing time
+        processing_time = (datetime.now() - start_time).total_seconds()
+        
+        # Build output
+        files = []
+        for f in parsed.get('files', []):
+            files.append(CodeFile(
+                filename=f.get('filename', 'untitled'),
+                language=f.get('language', 'text'),
+                code=f.get('code', ''),
+                description=f.get('description', '')
+            ))
+        
+        output = CodeGenOutput(
+            files=files,
+            summary=parsed.get('summary', ''),
+            techStack=parsed.get('techStack', []),
+            setupInstructions=parsed.get('setupInstructions', []),
+            nextSteps=parsed.get('nextSteps', []),
+            processingTime=processing_time
+        )
+        
+        return output
+        
+    except json.JSONDecodeError as e:
+        print(f"JSON parsing error: {e}")
+        print(f"Content: {content[:500]}...")
+        raise HTTPException(status_code=500, detail="Failed to parse AI response")
+    except Exception as e:
+        print(f"AI generation error: {e}")
+        raise HTTPException(status_code=500, detail=f"AI processing failed: {str(e)}")
+
+
+def store_code_generation(input: CodeGenInput, output: CodeGenOutput):
+    """Store code generation for analytics"""
+    if not ENABLE_ANALYTICS or not DATABASE_URL:
+        return
+    
+    conn = get_db_connection()
+    if not conn:
+        return
+    
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO tickets 
+            (install, ticket_title, ticket_description, issue_type, priority, clarified_output, processing_time)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+        """, (
+            input.install or 'unknown',
+            "[CODE_GEN]",
+            input.jiraDescription[:500],  # Store first 500 chars
+            "code_generation",
+            "normal",
+            json.dumps({
+                "type": "code_generation",
+                "files": [f.dict() for f in output.files],
+                "summary": output.summary,
+                "techStack": output.techStack,
+                "customPrompt": input.customPrompt
+            }),
+            output.processingTime
+        ))
+        conn.commit()
+    except Exception as e:
+        print(f"Error storing code generation: {e}")
+    finally:
+        conn.close()
+
+
+
 async def generate_clarification(ticket: TicketInput) -> ClarifiedOutput:
     """Generate clarification using Claude AI"""
     start_time = datetime.now()
@@ -481,7 +692,11 @@ Format your response as valid JSON with these exact keys:
   "testScenarios": ["scenario 1", "scenario 2", ...]
 }}
 
-Focus on being practical and actionable. Provide at least 3-5 items for each category."""
+Focus on being practical and actionable. Provide at least 3-5 items for each category.
+
+{ "For more important context please take this into account: " + ticket.customPrompt if ticket.customPrompt != "" else ""}
+
+"""
 
     try:
         # Call Claude API
@@ -641,6 +856,88 @@ async def clarify_ticket(ticket: TicketInput):
     except Exception as e:
         print(f"Clarification error: {e}")
         raise HTTPException(status_code=500, detail="Failed to clarify ticket")
+
+
+@app.post("/gen-code", response_model=CodeGenOutput)
+async def generate_code_endpoint(input: CodeGenInput):
+    """
+    Generate MVP code implementation from clarified Jira ticket.
+    
+    This is Step 2 of the GoBot workflow:
+    1. First, use /clarify to get acceptance criteria, edge cases, etc.
+    2. Apply the clarified output to the Jira ticket description
+    3. Then, use /gen-code with the full description to generate code
+    
+    The generated code includes:
+    - Well-commented source files
+    - Setup instructions
+    - Suggested next steps
+    """
+    license_key = input.accessKey or "free_user"
+    
+    # For paid users, check and increment usage
+    if license_key != "free_user":
+        conn = get_db_connection()
+        if conn:
+            try:
+                cur = conn.cursor()
+                
+                # Check usage limit before generating
+                cur.execute("""
+                    SELECT clarifications_used, clarifications_limit, plan
+                    FROM license_keys
+                    WHERE key_code = %s
+                    AND is_active = true
+                """, (license_key,))
+                
+                result = cur.fetchone()
+                
+                if result:
+                    if result['clarifications_used'] >= result['clarifications_limit']:
+                        raise HTTPException(
+                            status_code=429,
+                            detail=f"Monthly limit of {result['clarifications_limit']} reached. Please upgrade or wait for reset."
+                        )
+                    
+                    # Increment usage counter
+                    cur.execute("""
+                        UPDATE license_keys
+                        SET clarifications_used = clarifications_used + 1,
+                            updated_at = NOW()
+                        WHERE key_code = %s
+                        AND is_active = true
+                        RETURNING clarifications_used, clarifications_limit
+                    """, (license_key,))
+                    
+                    updated = cur.fetchone()
+                    conn.commit()
+                    
+                    if updated:
+                        print(f"📊 Code Gen Usage: {updated['clarifications_used']}/{updated['clarifications_limit']} for {license_key}")
+                
+            except HTTPException:
+                raise
+            except Exception as e:
+                print(f"Error tracking usage: {e}")
+            finally:
+                conn.close()
+    
+    # Generate code
+    try:
+        output = await generate_code(input)
+        
+        # Store for analytics
+        if ENABLE_ANALYTICS:
+            store_code_generation(input, output)
+        
+        return output
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Code generation error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to generate code")
+
 
 
 @app.post("/webhook/stripe")

@@ -94,8 +94,8 @@ export default function Home() {
                 <Bot className="w-7 h-7 text-white" />
               </div>
               <Badge className="px-4 py-2 bg-emerald-500/10 border-emerald-500/30 backdrop-blur-sm" variant="secondary">
-                <Sparkles className="w-3 h-3 mr-1" />
-                From Ticket to Code in Seconds
+                <Sparkles className="w-3 h-3 mr-1 text-white" />
+                <div style={{color: "white"}}>From Ticket to Code in Seconds</div>
               </Badge>
             </motion.div>
 

@@ -11,7 +11,9 @@ import ForgeReconciler, {
     ButtonGroup,
     SectionMessage,
     Form,
+    Label,
     Link,
+    TextArea,
     Textfield,
     Modal,
     ModalTransition
@@ -29,7 +31,9 @@ const App = () => {
     const [error, setError] = useState(null);
     const [issueDetails, setIssueDetails] = useState(null);
     const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
-    
+    const [clarifyCustomPrompt, setClarifyCustomPrompt] = useState(null);
+    const [codeGenCustomPrompt, setCodeGenCustomPrompt]  = useState(null);
+    const [showCustomPromptForm, setShowCustomPromptForm] = useState(false);
     // Access key state
     const [isKeyModalOpen, setKeyModalOpen] = useState(false);
     const [accessKey, setAccessKey] = useState('');
@@ -267,7 +271,8 @@ const App = () => {
             try {
                 const result = await invoke('clarifyIssue', { 
                     issueData: issueDetails,
-                    install: install 
+                    install: install,
+                    customPrompt: clarifyCustomPrompt
                 });
                 
                 if (result.error) {
@@ -284,23 +289,78 @@ const App = () => {
         }
     };
 
+    const formatClarifiedDescription = (clarifiedData, originalDescription = '') => {
+          let description = '';
+          
+          // Include original description if available
+          if (originalDescription) {
+              description += `${originalDescription}\n\n`;
+          }
+          
+          const { acceptanceCriteria, edgeCases, successMetrics, testScenarios } = clarifiedData;
+          
+          if (acceptanceCriteria && acceptanceCriteria.length > 0) {
+              description += '✅ Acceptance Criteria\n';
+              acceptanceCriteria.forEach(item => {
+                  description += `• ${item}\n`;
+              });
+              description += '\n';
+          }
+          
+          if (edgeCases && edgeCases.length > 0) {
+              description += '⚠️ Edge Cases\n';
+              edgeCases.forEach(item => {
+                  description += `• ${item}\n`;
+              });
+              description += '\n';
+          }
+          
+          if (successMetrics && successMetrics.length > 0) {
+              description += '📊 Success Metrics\n';
+              successMetrics.forEach(item => {
+                  description += `• ${item}\n`;
+              });
+              description += '\n';
+          }
+          
+          if (testScenarios && testScenarios.length > 0) {
+              description += '🧪 Test Scenarios\n';
+              testScenarios.forEach(item => {
+                  description += `• ${item}\n`;
+              });
+          }
+          
+          return description.trim();
+      };
+      
 
-    const goBotCode = async (ctx) => {
-        if(issueDetails){
+      const goBotCode = async (ctx) => {
+        if (clarifiedData) {
             setAnalyzing(true);
             setError(null);
             setFeedbackSubmitted(false);
             
             try {
+                // Format the clarified data into a description string
+                const formattedDescription = formatClarifiedDescription(
+                    clarifiedData, 
+                    issueDetails?.description || ''
+                );
+                
                 const result = await invoke('genCode', { 
-                    issueData: clarifiedData,
-                    install: install 
+                    issueData: {
+                        title: issueDetails?.title || '',
+                        description: formattedDescription
+                    },
+                    install: install,
+                    customPrompt: customPrompt || '',
+                    accessKey: accessKey
                 });
                 
                 if (result.error) {
-                  setError(result.error);
+                    setError(result.error);
                 } else {
-                  setCodeImplmentation(result);
+                    setCodeImplmentation(result);
                 }
             } catch (err) {
                 console.error('Invoke error:', err);
@@ -345,11 +405,71 @@ const App = () => {
       setCodeImplmentation(null);
       setLoading(false);
       setAnalyzing(false);
+      setClarifyCustomPrompt(null);
+      setCodeGenCustomPrompt(null);
       setError(null);
       setFeedbackSubmitted(false);
       const issueId = context?.extension.issue.id;
       getIssueData(issueId).then(setIssueDetails);
     }
+
+    const renderCodeOutput = () => {
+        if (!codeImplementation) return null;
+        
+        const { files, summary, techStack, setupInstructions, nextSteps } = codeImplementation;
+        
+        return (
+            <Box>
+                {summary && (
+                    <Box>
+                        <Heading size="small">📋 Summary</Heading>
+                        <Text>{summary}</Text>
+                    </Box>
+                )}
+                
+                {techStack && techStack.length > 0 && (
+                    <Box>
+                        <Heading size="small">🛠️ Tech Stack</Heading>
+                        {techStack.map((tech, i) => (
+                            <Text key={i}>• {tech}</Text>
+                        ))}
+                    </Box>
+                )}
+                
+                {files && files.map((file, i) => (
+                    <Box key={i}>
+                        <Heading size="small">📄 {file.filename}</Heading>
+                        {file.description && <Text><Em>{file.description}</Em></Text>}
+                        <Box backgroundColor="color.background.neutral">
+                            <Text>
+                                <code style={{ whiteSpace: 'pre-wrap', fontFamily: 'monospace' }}>
+                                    {file.code}
+                                </code>
+                            </Text>
+                        </Box>
+                    </Box>
+                ))}
+                
+                {setupInstructions && setupInstructions.length > 0 && (
+                    <Box>
+                        <Heading size="small">🚀 Setup Instructions</Heading>
+                        {setupInstructions.map((step, i) => (
+                            <Text key={i}>{i + 1}. {step}</Text>
+                        ))}
+                    </Box>
+                )}
+                
+                {nextSteps && nextSteps.length > 0 && (
+                    <Box>
+                        <Heading size="small">📌 Next Steps</Heading>
+                        {nextSteps.map((step, i) => (
+                            <Text key={i}>• {step}</Text>
+                        ))}
+                    </Box>
+                )}
+            </Box>
+        );
+    };
 
     const renderClarifiedContent = () => {
       if (!clarifiedData) return null;
@@ -360,7 +480,7 @@ const App = () => {
         <Box>
           {applied ? (
             <SectionMessage title="Success" appearance="confirmation">
-              <Text>Changes have been applied to the ticket description! Refresh browser to view.</Text>
+              <Text> Changes have been applied to the ticket description. Next, have GoBot Code! </Text>
             </SectionMessage>
           ):<></>}
   
@@ -420,7 +540,7 @@ const App = () => {
       let jsx;
       
       if(accessKey){
-          if(coded){
+          if( coded ) {
             jsx = <ButtonGroup>
                     <Button 
                       onClick={applyToTicket}
@@ -448,12 +568,40 @@ const App = () => {
                       <Text>Thank you for your feedback!</Text>
                     </SectionMessage>
             }
-          }else{
+          } else {
             if(applied){
-              jsx = <Stack>
+              jsx = <Box>
                       <Text>
-                      <Em>Step 2. Transform scope to an initial AI implementation.</Em>
-                    </Text>
+                        <Em>Step 2. Transform scope to an initial AI implementation.</Em>
+                      </Text>
+                      {showCustomPromptForm ? 
+                          <Form onSubmit={handleKeySubmit}>
+                            <Label labelFor="codeGenCustomPrompt">Custom Prompt:</Label>
+                            <TextArea 
+                                id="codeGenCustomPrompt"
+                                name="codeGenCustomPrompt"
+                                label="Custom Prompt"
+                                placeholder="e.g. Build with Python"
+                                value={codeGenCustomPrompt}
+                                onChange={(e) => {setCodeGenCustomPrompt(e.target.value)} }
+                            />
+                            <Button onClick={()=>{
+                              if(showCustomPromptForm){
+                                setShowCustomPromptForm(false);
+                              }else{
+                                setShowCustomPromptForm(true);
+                              }
+                            }}>Clear</Button>
+                          </Form> 
+                          :
+                          <Button onClick={()=>{
+                            if(showCustomPromptForm){
+                              setShowCustomPromptForm(false);
+                            }else{
+                              setShowCustomPromptForm(true);
+                            }
+                          }}>Custom Prompt</Button>
+                        }
                       <Button onClick={goBotCode} appearance="primary">GoBot Code!</Button>
                       {!feedbackSubmitted ? 
                           <Box>
@@ -471,8 +619,8 @@ const App = () => {
                             <Text>Thank you for your feedback!</Text>
                           </SectionMessage>
                       }
-                    </Stack>
-            }else{
+                    </Box>
+            } else {
               if(!initial) {
                 jsx = <ButtonGroup>
                         <Button 
@@ -484,14 +632,39 @@ const App = () => {
                         >GoBot Again</Button>
                       </ButtonGroup>
               } else {
-
-                jsx = <Stack> 
+                jsx = <Box> 
                       <Text>
                         <Em>Step 1. Transform tickets into crystal-clear scope.</Em>
                       </Text>
-
+                      {showCustomPromptForm ? 
+                          <Form onSubmit={handleKeySubmit}>
+                            <Label labelFor="clarifyCustomPrompt">Custom Prompt:</Label>
+                            <TextArea 
+                                name="clarifyCustomPrompt"
+                                label="Custom Prompt"
+                                placeholder="e.g. Satisfy with Python"
+                                value={clarifyCustomPrompt}
+                                onChange={(e) => {setClarifyCustomPrompt(e.target.value)} }
+                            />
+                            <Button onClick={()=>{
+                              if(showCustomPromptForm){
+                                setShowCustomPromptForm(false);
+                              }else{
+                                setShowCustomPromptForm(true);
+                              }
+                            }}>Clear</Button>
+                          </Form> 
+                          :
+                          <Button onClick={()=>{
+                            if(showCustomPromptForm){
+                              setShowCustomPromptForm(false);
+                            }else{
+                              setShowCustomPromptForm(true);
+                            }
+                          }}>Custom Prompt</Button>
+                        }
                       <Button onClick={clarifyTicket} appearance="primary">GoBot</Button>
-                   </Stack>
+                   </Box>
               }
             }
           }
