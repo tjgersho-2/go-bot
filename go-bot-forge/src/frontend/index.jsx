@@ -680,11 +680,9 @@ const App = () => {
                   </Button>
                 </ButtonGroup>
         }
-
-      console.log(jsx);
+ 
       return (  
           <Box>
-            <Text><Em>Plan: {plan}</Em></Text>
             {jsx}
           </Box>
        );
@@ -782,6 +780,8 @@ const App = () => {
 
     {renderClarifiedContent()}
     {renderCodeOutput()}
+
+    <Text><Em>Plan: {plan}</Em></Text>
   </Box>
  );
 };
