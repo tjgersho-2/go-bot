@@ -137,7 +137,6 @@ class CodeGenInput(BaseModel):
     install: Optional[str] = Field(default=None, description="Organization ID for auth")
     accessKey: Optional[str] = Field(default=None, description="License Key")
 
-
 class CodeFile(BaseModel):
     """A single generated code file"""
     filename: str = Field(..., description="Filename with extension")
@@ -148,11 +147,8 @@ class CodeFile(BaseModel):
 
 class CodeGenOutput(BaseModel):
     """Output from code generation"""
-    files: List[CodeFile] = Field(default_factory=list, description="Generated code files")
-    summary: str = Field(default="", description="Summary of the implementation")
-    techStack: List[str] = Field(default_factory=list, description="Technologies/frameworks used")
-    setupInstructions: List[str] = Field(default_factory=list, description="How to run/setup the code")
-    nextSteps: List[str] = Field(default_factory=list, description="Suggested next steps for the developer")
+    implementation: str = Field(..., description="Full implementation as markdown-formatted text")
+    summary: str = Field(default="", description="Brief summary of what was built")
     processingTime: Optional[float] = Field(default=None, description="Processing time in seconds")
 
 
@@ -480,7 +476,6 @@ async def get_similar_tickets(description: str, install: str) -> List[Dict]:
 
 
 
-
 async def generate_code(input: CodeGenInput) -> CodeGenOutput:
     """Generate MVP code implementation using Claude AI"""
     start_time = datetime.now()
@@ -488,78 +483,62 @@ async def generate_code(input: CodeGenInput) -> CodeGenOutput:
     if not app.state.claude:
         raise HTTPException(status_code=500, detail="AI service not configured")
     
-    # Build the prompt
-    prompt = f"""You are a senior software engineer tasked with generating a clean, well-documented MVP implementation based on a clarified Jira ticket.
+    prompt = f"""You are a senior software engineer. Generate a clean, well-documented MVP implementation based on this Jira ticket.
 
-## Clarified Jira Ticket Description
+## Jira Ticket
 
-{input.jiraDescription}
+{input.jira_description}
 
-{f"## Custom Instructions{chr(10)}{input.customPrompt}" if input.customPrompt else ""}
+{f"## Extra important context to take into account {chr(10)}{input.customPrompt}" if input.customPrompt else ""}
 
 ## Your Task
 
-Generate a **minimal viable implementation** that:
-1. Satisfies all the acceptance criteria in the ticket
-2. Handles the identified edge cases with appropriate error handling
-3. Considers the success metrics when designing the solution
-4. Can be validated against the test scenarios
-5. Is well-structured and follows best practices
-
-## Code Requirements
-
-Include **extensive comments** explaining:
-- What each section/function does
-- Why certain decisions were made
-- How it maps to the acceptance criteria
-- Where edge cases are handled
-- Suggestions for future improvements (as TODO comments)
-
-## Code Style Guidelines
-- Write clean, readable code with meaningful variable/function names
-- Add a file header comment explaining the purpose
-- Include inline comments for complex logic
-- Use docstrings/JSDoc for functions
-- Keep functions small and focused
-- Handle errors gracefully with informative messages
+Generate a complete, working implementation that satisfies the requirements.
 
 ## Response Format
 
-Respond with valid JSON in this exact structure:
-{{
-  "files": [
-    {{
-      "filename": "example.py",
-      "language": "python",
-      "code": "# Full code with comments here...",
-      "description": "Brief description of this file's purpose"
-    }}
-  ],
-  "summary": "2-3 sentence summary of what was implemented and the approach taken",
-  "techStack": ["language", "framework", "libraries used"],
-  "setupInstructions": [
-    "Step 1: Install dependencies...",
-    "Step 2: Configure...",
-    "Step 3: Run..."
-  ],
-  "nextSteps": [
-    "Add unit tests for...",
-    "Implement additional feature...",
-    "Consider adding..."
-  ]
-}}
+Structure your response EXACTLY like this (use markdown formatting):
 
-## Important Notes
-- Generate working, runnable code (not pseudocode)
-- If multiple files are needed, include all of them
-- Include any necessary configuration files (e.g., requirements.txt, package.json)
-- The code should be a solid MVP foundation that can be extended
-- Prioritize clarity and maintainability over cleverness
+## 📋 Summary
 
-Now generate the MVP implementation:"""
+[2-3 sentences describing what you built and the approach taken]
+
+## 🛠️ Tech Stack
+
+- [Technology 1]
+- [Technology 2]
+
+## 💻 Implementation
+
+### [filename.ext]
+
+[Brief description of this file]
+```[language]
+[Complete, well-commented code here]
+```
+
+[Repeat for each file needed]
+
+## 🚀 Setup & Run
+
+1. [Step 1]
+2. [Step 2]
+
+## 📌 Next Steps
+
+- [Suggested improvement 1]
+- [Suggested improvement 2]
+
+## Guidelines
+
+- Write complete, runnable code (not pseudocode)
+- Include extensive comments explaining the logic
+- Handle edge cases mentioned in the ticket
+- Use clear variable/function names
+
+Generate the implementation now:"""
 
     try:
-        # Call Claude API with extended token limit for code generation
         message = app.state.claude.messages.create(
             model="claude-sonnet-4-20250514",
             max_tokens=8000,
@@ -571,50 +550,30 @@ Now generate the MVP implementation:"""
             ]
         )
         
-        # Parse response
-        content = message.content[0].text
+        implementation = message.content[0].text.strip()
         
-        # Handle potential markdown code blocks
-        if '```json' in content:
-            content = content.split('```json')[1].split('```')[0].strip()
-        elif '```' in content:
-            parts = content.split('```')
-            for part in parts:
-                part = part.strip()
-                if part.startswith('{'):
-                    content = part
-                    break
+        # Extract summary
+        summary = "Implementation generated successfully."
+        if "## 📋 Summary" in implementation:
+            try:
+                summary_section = implementation.split("## 📋 Summary")[1]
+                summary_end = summary_section.find("##")
+                if summary_end > 0:
+                    summary = summary_section[:summary_end].strip()
+                else:
+                    summary = summary_section.strip()
+                summary = summary.split("\n\n")[0].strip()
+            except:
+                pass
         
-        parsed = json.loads(content)
-        
-        # Calculate processing time
         processing_time = (datetime.now() - start_time).total_seconds()
         
-        # Build output
-        files = []
-        for f in parsed.get('files', []):
-            files.append(CodeFile(
-                filename=f.get('filename', 'untitled'),
-                language=f.get('language', 'text'),
-                code=f.get('code', ''),
-                description=f.get('description', '')
-            ))
-        
-        output = CodeGenOutput(
-            files=files,
-            summary=parsed.get('summary', ''),
-            techStack=parsed.get('techStack', []),
-            setupInstructions=parsed.get('setupInstructions', []),
-            nextSteps=parsed.get('nextSteps', []),
+        return CodeGenOutput(
+            implementation=implementation,
+            summary=summary,
             processingTime=processing_time
         )
         
-        return output
-        
-    except json.JSONDecodeError as e:
-        print(f"JSON parsing error: {e}")
-        print(f"Content: {content[:500]}...")
-        raise HTTPException(status_code=500, detail="Failed to parse AI response")
     except Exception as e:
         print(f"AI generation error: {e}")
         raise HTTPException(status_code=500, detail=f"AI processing failed: {str(e)}")

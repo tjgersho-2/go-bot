@@ -1,9 +1,109 @@
 import Resolver from '@forge/resolver';
+import { Queue } from '@forge/events';
+import { kvs as storage } from '@forge/kvs';
 
-const resolver = new Resolver();
+import { v4 as uuidv4 } from 'uuid';
 
 // Base API URL - use environment variable or hardcode
 const API_BASE_URL = 'https://jira-clarifier-production.up.railway.app';
+
+const resolver = new Resolver();
+const queue = new Queue({ key: 'gobot-queue' });
+
+resolver.define('startGenCode', async ({ payload }) => {
+  const { issueData, install, customPrompt, accessKey } = payload;
+  
+  const jobId = uuidv4();
+ 
+  await storage.set(`job:${jobId}`, {
+      status: 'queued',
+      createdAt: new Date().toISOString()
+  });
+  
+  // Ensure all values are defined (no null values)
+  const eventPayload = {
+      jobId: jobId,
+      type: 'genCode',
+      data: {
+          jiraDescription: `# ${issueData?.title || 'Untitled'}\n\n${issueData?.description || ''}`,
+          customPrompt: customPrompt || '',
+          install: install || '',
+          accessKey: accessKey || ''
+      }
+  };
+  
+  await queue.push({body: eventPayload});
+  
+  return { jobId };
+});
+
+/**
+ * Start a clarification job (returns immediately with job ID)
+ */
+resolver.define('startClarifyIssue', async ({ payload }) => {
+  const { issueData, install, customPrompt, accessKey } = payload;
+  
+  // Generate unique job ID
+  const jobId = uuidv4();
+  
+  console.log(`📝 Creating job ${jobId} for clarification`);
+  
+  // Initialize job status
+  await storage.set(`job:${jobId}`, {
+      status: 'queued',
+      createdAt: new Date().toISOString()
+  });
+  
+  // Ensure all values are defined (no null values)
+  const eventPayload = {
+      jobId: jobId,
+      type: 'clarifyIssue',
+      data: {
+          title: issueData?.title || '',
+          description: issueData?.description || '',
+          issueType: issueData?.issueType || 'Task',
+          priority: issueData?.priority || 'Medium',
+          customPrompt: customPrompt || '',
+          install: install || '',
+          accessKey: accessKey || ''
+      }
+  };
+  
+  console.log('📤 Pushing to queue:', JSON.stringify(eventPayload));
+  
+  // Push to queue for background processing
+  await queue.push({body: eventPayload});
+  
+  console.log(`✅ Job ${jobId} queued`);
+  
+  return { jobId };
+});
+
+/**
+ * Check job status (called by frontend polling)
+ */
+resolver.define('getJobStatus', async ({ payload }) => {
+    const { jobId } = payload;
+    
+    const job = await storage.get(`job:${jobId}`);
+    
+    if (!job) {
+        return { status: 'not_found' };
+    }
+    
+    return job;
+});
+
+/**
+ * Clean up completed job from storage
+ */
+resolver.define('clearJob', async ({ payload }) => {
+    const { jobId } = payload;
+    await storage.delete(`job:${jobId}`);
+    return { success: true };
+});
+
+
 
 /**
  * Health check resolver (for testing)

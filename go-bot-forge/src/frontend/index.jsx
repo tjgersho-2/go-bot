@@ -42,6 +42,39 @@ const App = () => {
     const [plan, setPlan] = useState('free');
     const [isValidatingKey, setValidatingKey] = useState(false);
     
+    const POLL_INTERVAL = 2000; // Poll every 2 seconds
+
+    const pollJobStatus = async (jobId, onComplete, onError) => {
+        const poll = async () => {
+            try {
+                const status = await invoke('getJobStatus', { jobId });
+                
+                console.log(`📊 Job ${jobId} status:`, status.status);
+                
+                if (status.status === 'completed') {
+                    // Clean up storage
+                    await invoke('clearJob', { jobId });
+                    onComplete(status.result);
+                    return;
+                }
+                
+                if (status.status === 'failed') {
+                    await invoke('clearJob', { jobId });
+                    onError(status.error || 'Job failed');
+                    return;
+                }
+                
+                // Still processing, poll again
+                setTimeout(poll, POLL_INTERVAL);
+                
+            } catch (err) {
+                console.error('Polling error:', err);
+                onError('Failed to check job status');
+            }
+        };
+        
+        poll();
+    };
 
     const checkHealth = async () => {
       try {
@@ -195,6 +228,58 @@ const App = () => {
       }
     };
 
+ 
+    const addCodeAsComment = async (issueKey, codeImplementation) => {
+        const { implementation, summary } = codeImplementation;
+        
+        const commentBody = {
+            type: 'doc',
+            version: 1,
+            content: [
+                {
+                    type: 'heading',
+                    attrs: { level: 2 },
+                    content: [{ type: 'text', text: '🤖 GoBot Implementation' }]
+                },
+                {
+                    type: 'paragraph',
+                    content: [{ 
+                        type: 'text', 
+                        text: summary,
+                        marks: [{ type: 'em' }]
+                    }]
+                },
+                {
+                    type: 'codeBlock',
+                    attrs: { language: 'markdown' },
+                    content: [{ type: 'text', text: implementation }]
+                }
+            ]
+        };
+
+        try {
+            const response = await requestJira(
+                `/rest/api/3/issue/${issueKey}/comment`,
+                {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ body: commentBody })
+                }
+            );
+            
+            if (!response.ok) {
+                throw new Error(`Failed to add comment: ${response.status}`);
+            }
+            
+            return { success: true };
+        } catch (error) {
+            throw error;
+        }
+    };
+
     const checkOnAccessKey = async (install) =>{
       try {
         setValidatingKey(true);
@@ -255,35 +340,48 @@ const App = () => {
         await validateAccessKey(install, accessKey.trim().toUpperCase());
     };
 
-    const clarifyTicket = async (ctx) => {
-        // Check if user has access
+    // Updated clarifyTicket function
+    const clarifyTicket = async () => {
         if (!install) {
             setKeyModalOpen(true);
             setError('Please enter your access key to use this feature');
             return;
         }
         
-        if(issueDetails){
+        if (issueDetails) {
             setAnalyzing(true);
             setError(null);
             setFeedbackSubmitted(false);
             
             try {
-                const result = await invoke('clarifyIssue', { 
+                // Start the job (returns immediately)
+                const { jobId } = await invoke('startClarifyIssue', { 
                     issueData: issueDetails,
                     install: install,
-                    customPrompt: clarifyCustomPrompt
+                    customPrompt: clarifyCustomPrompt || "",
+                    accessKey: accessKey
                 });
                 
-                if (result.error) {
-                  setError(result.error);
-                } else {
-                  setClarifiedData(result);
-                }
+                console.log(`🚀 Started clarify job: ${jobId}`);
+                
+                // Poll for completion
+                pollJobStatus(
+                    jobId,
+                    (result) => {
+                        // Success
+                        setClarifiedData(result);
+                        setAnalyzing(false);
+                    },
+                    (error) => {
+                        // Error
+                        setError(error);
+                        setAnalyzing(false);
+                    }
+                );
+                
             } catch (err) {
                 console.error('Invoke error:', err);
-                setError('Failed to clarify ticket. Please try again.');
-            } finally {
+                setError('Failed to start clarification. Please try again.');
                 setAnalyzing(false);
             }
         }
@@ -334,54 +432,56 @@ const App = () => {
       };
       
 
-      const goBotCode = async (ctx) => {
+      // Updated goBotCode function
+      const goBotCode = async () => {
         if (clarifiedData) {
             setAnalyzing(true);
             setError(null);
             setFeedbackSubmitted(false);
             
             try {
-                // Format the clarified data into a description string
                 const formattedDescription = formatClarifiedDescription(
                     clarifiedData, 
                     issueDetails?.description || ''
                 );
-                const issueData = {
-                    title: issueDetails?.title || '',
-                    description: formattedDescription
-                }
-                const jiraDescription = `# ${issueData.title || 'Untitled'}\n\n${issueData.description || ''}`;
-                console.log("Jira Description for genCode:");
-                console.log(jiraDescription);
-                console.log(issueData);
-                console.log("-----------")
-                console.log("Custom Prompt:");
-                console.log(codeGenCustomPrompt);
-                console.log(install);
-                console.log(accessKey)
-                const result = await invoke('genCode', { 
-                    issueData:issueData,
+                
+                // Start the job (returns immediately)
+                const { jobId } = await invoke('startGenCode', { 
+                    issueData: {
+                        title: issueDetails?.title || '',
+                        description: formattedDescription
+                    },
                     install: install,
                     customPrompt: codeGenCustomPrompt || '',
                     accessKey: accessKey
                 });
-
-                console.log("Result from GenCode..");
-                console.log(result);
                 
-                if (result.error) {
-                    setError(result.error);
-                } else {
-                    setCodeImplementation(result);
-                }
+                console.log(`🚀 Started code gen job: ${jobId}`);
+                
+                // Poll for completion
+                pollJobStatus(
+                    jobId,
+                    (result) => {
+                        console.log("Result on Code: ");
+                        console.log(result);
+                        // Success
+                        setCodeImplementation(result);
+                        setAnalyzing(false);
+                    },
+                    (error) => {
+                        // Error
+                        setError(error);
+                        setAnalyzing(false);
+                    }
+                );
+                
             } catch (err) {
                 console.error('Invoke error:', err);
-                setError('Failed to generate code from the ticket. Please try again.');
-            } finally {
+                setError('Failed to start code generation. Please try again.');
                 setAnalyzing(false);
             }
         }
-    };
+      };
 
     const submitFeedback = async (feedbackType) => {
         if (!clarifiedData || !issueDetails) return;
@@ -411,6 +511,21 @@ const App = () => {
         }
     };
 
+    const saveCodeToTicket = async () => {
+      if (!codeImplementation) return;
+      
+      setLoading(true);
+      try {
+          const issueId = context?.extension.issue.id;
+          await addCodeAsComment(issueId, codeImplementation);
+          setCodeSaved(true);
+      } catch (err) {
+          setError(`Failed to save code as comment. ${err}`);
+      } finally {
+          setLoading(false);
+      }
+  };
+
     const resetAnalysis = async () => {
       setClarifiedData(null);
       setCodeImplementation(null);
@@ -420,67 +535,38 @@ const App = () => {
       setCodeGenCustomPrompt(null);
       setError(null);
       setFeedbackSubmitted(false);
+      setCodeSaved(false);
       const issueId = context?.extension.issue.id;
       getIssueData(issueId).then(setIssueDetails);
     }
 
     const renderCodeOutput = () => {
-        if (!codeImplementation) return null;
-        
-        const { files, summary, techStack, setupInstructions, nextSteps } = codeImplementation;
-        console.log(codeImplementation);
-        return (
-            <Box>
-                {summary && (
-                    <Box>
-                        <Heading size="small">📋 Summary</Heading>
-                        <Text>{summary}</Text>
-                    </Box>
-                )}
-                
-                {techStack && techStack.length > 0 && (
-                    <Box>
-                        <Heading size="small">🛠️ Tech Stack</Heading>
-                        {techStack.map((tech, i) => (
-                            <Text key={i}>• {tech}</Text>
-                        ))}
-                    </Box>
-                )}
-                
-                {files && files.map((file, i) => (
-                    <Box key={i}>
-                        <Heading size="small">📄 {file.filename}</Heading>
-                        {file.description && <Text><Em>{file.description}</Em></Text>}
-                        <Box backgroundColor="color.background.neutral">
-                            <Text>
-                                <code style={{ whiteSpace: 'pre-wrap', fontFamily: 'monospace' }}>
-                                    {file.code}
-                                </code>
-                            </Text>
-                        </Box>
-                    </Box>
-                ))}
-                
-                {setupInstructions && setupInstructions.length > 0 && (
-                    <Box>
-                        <Heading size="small">🚀 Setup Instructions</Heading>
-                        {setupInstructions.map((step, i) => (
-                            <Text key={i}>{i + 1}. {step}</Text>
-                        ))}
-                    </Box>
-                )}
-                
-                {nextSteps && nextSteps.length > 0 && (
-                    <Box>
-                        <Heading size="small">📌 Next Steps</Heading>
-                        {nextSteps.map((step, i) => (
-                            <Text key={i}>• {step}</Text>
-                        ))}
-                    </Box>
-                )}
-            </Box>
-        );
-    };
+      if (!codeImplementation) return null;
+          
+          const { implementation, summary } = codeImplementation;
+          
+          return (
+              <Box>
+                  {codeSaved ? (
+                      <SectionMessage title="✅ Saved to Ticket" appearance="confirmation">
+                          <Text>Code has been added as a comment. Refresh to view.</Text>
+                      </SectionMessage>
+                  ) : (
+                      <SectionMessage title="🤖 Code Generated" appearance="info">
+                          <Text>{summary}</Text>
+                      </SectionMessage>
+                  )}
+                  
+                  <Box backgroundColor="color.background.neutral" padding="space.100">
+                      <Text>
+                          <Text style={{ whiteSpace: 'pre-wrap', fontFamily: 'monospace', fontSize: '11px' }}>
+                              {implementation}
+                          </Text>
+                      </Text>
+                  </Box>
+              </Box>
+          );
+      };
 
     const renderClarifiedContent = () => {
       if (!clarifiedData) return null;
@@ -601,7 +687,7 @@ const App = () => {
               <Box>
                 <ButtonGroup>
                   <Button 
-                    onClick={applyToTicket}
+                    onClick={saveCodeToTicket}
                     appearance="primary"
                   >Save to Ticket</Button>
                   <Button 

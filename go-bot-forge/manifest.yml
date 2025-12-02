@@ -7,9 +7,16 @@ modules:
       render: native
       title: GoBot
       icon: https://developer.atlassian.com/platform/forge/images/icons/issue-panel-icon.svg
+  consumer:
+    - key: async-processor
+      queue: gobot-queue
+      function: asyncProcessor
   function:
     - key: worker-resolver
       handler: index.handler
+    - key: asyncProcessor
+      handler: asyncProcessor.handler
+      timeoutSeconds: 600
 resources:
   - key: main
     path: src/frontend/index.jsx
@@ -23,6 +30,7 @@ permissions:
   scopes:
     - write:jira-work
     - read:jira-work
+    - storage:app
   external:
     fetch:
       backend:
