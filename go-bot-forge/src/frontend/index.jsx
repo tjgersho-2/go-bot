@@ -543,7 +543,7 @@ const App = () => {
                   <Box backgroundColor="color.background.neutral" padding="space.100">
                       <Text>
                           <Text style={{ whiteSpace: 'pre-wrap', fontFamily: 'monospace', fontSize: '11px' }}>
-                              {implementation.substring(0, 100)}...
+                              {implementation.substring(0, 400)}...
                           </Text>
                       </Text>
                   </Box>
@@ -558,7 +558,7 @@ const App = () => {
 
       return (
         <Box>
-          {applied ? (
+          {applied && !codeSaved ? (
             <SectionMessage title="Success" appearance="confirmation">
               <Text> Changes have been applied to the ticket description. Next, have GoBot Code! </Text>
             </SectionMessage>
@@ -669,10 +669,12 @@ const App = () => {
             jsx = (
               <Box>
                 <ButtonGroup>
-                  <Button 
-                    onClick={saveCodeToTicket}
-                    appearance="primary"
-                  >Save to Ticket</Button>
+                  {!codeSaved ?
+                    <Button 
+                      onClick={saveCodeToTicket}
+                      appearance="primary"
+                    >Save to Ticket</Button>
+                 :<></> }
                   <Button 
                     onClick={goBotCode}
                   >GoBot Code Again</Button>
@@ -858,12 +860,12 @@ const App = () => {
       {/* Content - only shown when not loading */}
       {!isAnyLoading && (
         <>
-          {renderClarifiedContent()}
           {renderCodeOutput()}
+          {renderClarifiedContent()}
         </>
       )}
       {!isAnyLoading && (
-            <Text><Em>Plan: {plan}</Em></Text>
+            <Text><Em>Plan: {plan.toUpperCase()}</Em></Text>
       )}
     </Box>
  );

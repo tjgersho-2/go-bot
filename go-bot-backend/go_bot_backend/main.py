@@ -378,7 +378,7 @@ def send_license_key_email(email: str, license_key: str, plan_name: str, clarifi
 # ============================================================================
 
 async def generate_code(input: CodeGenInput) -> CodeGenOutput:
-    """Generate MVP code implementation using Claude AI"""
+    """Generate MVP code implementation using Claude AI with continuation support"""
     start_time = datetime.now()
     
     if not app.state.claude:
@@ -388,9 +388,9 @@ async def generate_code(input: CodeGenInput) -> CodeGenOutput:
 
 ## Jira Ticket
 
-{input.jiraDescription}
+{input.jira_description}
 
-{f"## Extra important context to take into account {chr(10)}{input.customPrompt}" if input.customPrompt else ""}
+{f"## Extra important context to take into account{chr(10)}{input.customPrompt}" if input.customPrompt else ""}
 
 ## Your Task
 
@@ -440,18 +440,47 @@ Structure your response EXACTLY like this (use markdown formatting):
 Generate the implementation now:"""
 
     try:
-        message = app.state.claude.messages.create(
-            model="claude-sonnet-4-20250514",
-            max_tokens=8000,
-            messages=[
-                {
-                    "role": "user",
-                    "content": prompt
-                }
-            ]
-        )
+        # Initial request
+        messages = [{"role": "user", "content": prompt}]
+        full_response = ""
+        max_continuations = 5  # Safety limit to prevent infinite loops
+        continuation_count = 0
         
-        implementation = message.content[0].text.strip()
+        while continuation_count < max_continuations:
+            message = app.state.claude.messages.create(
+                model="claude-sonnet-4-20250514",
+                max_tokens=8000,
+                messages=messages
+            )
+            
+            # Get the response text
+            response_text = message.content[0].text
+            full_response += response_text
+            
+            print(f"📝 Response chunk {continuation_count + 1}: {len(response_text)} chars, stop_reason: {message.stop_reason}")
+            
+            # Check if Claude finished naturally
+            if message.stop_reason == "end_turn":
+                print("✅ Claude finished naturally")
+                break
+            
+            # If stopped due to max_tokens, continue the conversation
+            if message.stop_reason == "max_tokens":
+                print("⏳ Response truncated, requesting continuation...")
+                continuation_count += 1
+                
+                # Add assistant's partial response and ask to continue
+                messages.append({"role": "assistant", "content": response_text})
+                messages.append({"role": "user", "content": "Please continue exactly where you left off. Do not repeat any content, just continue from the exact point you stopped."})
+            else:
+                # Unknown stop reason, break to be safe
+                print(f"⚠️ Unknown stop_reason: {message.stop_reason}")
+                break
+        
+        if continuation_count >= max_continuations:
+            print(f"⚠️ Reached max continuations ({max_continuations})")
+        
+        implementation = full_response.strip()
         
         # Extract summary
         summary = "Implementation generated successfully."
@@ -481,14 +510,12 @@ Generate the implementation now:"""
 
 
 async def generate_clarification(ticket: TicketInput) -> ClarifiedOutput:
-    """Generate clarification using Claude AI"""
+    """Generate clarification using Claude AI with continuation support"""
     start_time = datetime.now()
     
     if not app.state.claude:
         raise HTTPException(status_code=500, detail="AI service not configured")
     
- 
-    # Build prompt
     prompt = f"""You are a senior software engineer helping to clarify Jira tickets. Given the following ticket information, provide clear, actionable acceptance criteria and additional details.
 
 Ticket Title: {ticket.title}
@@ -512,25 +539,40 @@ Format your response as valid JSON with these exact keys:
 
 Focus on being practical and actionable. Provide at least 3-5 items for each category.
 
-{ "For more important context please take this into account: " + ticket.customPrompt if ticket.customPrompt != "" else ""}
-
+{f"For more important context please take this into account: {ticket.customPrompt}" if ticket.customPrompt else ""}
 """
 
     try:
-        # Call Claude API
-        message = app.state.claude.messages.create(
-            model="claude-sonnet-4-20250514",
-            max_tokens=2000,
-            messages=[
-                {
-                    "role": "user",
-                    "content": prompt
-                }
-            ]
-        )
+        messages = [{"role": "user", "content": prompt}]
+        full_response = ""
+        max_continuations = 3
+        continuation_count = 0
         
-        # Parse response
-        content = message.content[0].text
+        while continuation_count < max_continuations:
+            message = app.state.claude.messages.create(
+                model="claude-sonnet-4-20250514",
+                max_tokens=4000,
+                messages=messages
+            )
+            
+            response_text = message.content[0].text
+            full_response += response_text
+            
+            print(f"📝 Clarify chunk {continuation_count + 1}: {len(response_text)} chars, stop_reason: {message.stop_reason}")
+            
+            if message.stop_reason == "end_turn":
+                print("✅ Claude finished naturally")
+                break
+            
+            if message.stop_reason == "max_tokens":
+                print("⏳ Response truncated, requesting continuation...")
+                continuation_count += 1
+                messages.append({"role": "assistant", "content": response_text})
+                messages.append({"role": "user", "content": "Continue the JSON exactly where you left off. Do not restart or repeat content."})
+            else:
+                break
+        
+        content = full_response.strip()
         
         # Handle potential markdown code blocks
         if '```json' in content:
@@ -540,10 +582,8 @@ Focus on being practical and actionable. Provide at least 3-5 items for each cat
         
         parsed = json.loads(content)
         
-        # Calculate processing time
         processing_time = (datetime.now() - start_time).total_seconds()
         
-        # Build output
         output = ClarifiedOutput(
             acceptanceCriteria=parsed.get('acceptanceCriteria', []),
             edgeCases=parsed.get('edgeCases', []),
@@ -562,7 +602,7 @@ Focus on being practical and actionable. Provide at least 3-5 items for each cat
         print(f"AI generation error: {e}")
         raise HTTPException(status_code=500, detail=f"AI processing failed: {str(e)}")
 
- 
+
 # ============================================================================
 # API Endpoints
 # ============================================================================
