@@ -388,7 +388,7 @@ async def generate_code(input: CodeGenInput) -> CodeGenOutput:
 
 ## Jira Ticket
 
-{input.jira_description}
+{input.jiraDescription}
 
 {f"## Extra important context to take into account{chr(10)}{input.customPrompt}" if input.customPrompt else ""}
 
