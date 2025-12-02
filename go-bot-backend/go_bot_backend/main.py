@@ -174,14 +174,7 @@ class UsageStats(BaseModel):
     clarificationsRemaining: int
     plan: str
     resetDate: Optional[str]
-
-class FeedbackInput(BaseModel):
-    ticketData: Dict[str, Any]
-    clarifiedOutput: Dict[str, Any]
-    feedbackType: str = Field(..., description="'upvote' or 'downvote'")
-    install: str
-    comment: Optional[str] = None
-
+ 
 class AccessKeyInput(BaseModel):
     accessKey: str = Field(..., description="License key to validate")
     install: str = Field(..., description="Install ID")
@@ -254,20 +247,6 @@ def init_database():
  
         """Add these table creations to your init_database() function"""
         
-        # Feedback table for fine-tuning
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS feedback (
-                id SERIAL PRIMARY KEY,
-                install VARCHAR(255),
-                ticket_title TEXT,
-                ticket_description TEXT,
-                clarified_output JSONB,
-                feedback_type VARCHAR(20) CHECK (feedback_type IN ('upvote', 'downvote')),
-                comment TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-        
         # Update license_keys table for subscriptions
         cur.execute("""
             CREATE TABLE IF NOT EXISTS license_keys (
@@ -302,8 +281,6 @@ def init_database():
         # Create indexes
         cur.execute("CREATE INDEX IF NOT EXISTS idx_install ON organizations(install)")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_tickets_org ON tickets(install)")
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_feedback_org ON feedback(install)")
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_feedback_type ON feedback(feedback_type)")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_license_key_code ON license_keys(key_code)")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_license_email ON license_keys(customer_email)")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_license_subscription ON license_keys(stripe_subscription_id)")
@@ -325,36 +302,6 @@ if DATABASE_URL:
 # User & Auth Helpers
 # ============================================================================
  
-
-def store_feedback(feedback: FeedbackInput):
-    """Store user feedback for model fine-tuning"""
-    if not DATABASE_URL:
-        return
-    
-    conn = get_db_connection()
-    if not conn:
-        return
-    
-    try:
-        cur = conn.cursor()
-        cur.execute("""
-            INSERT INTO feedback 
-            (install, ticket_title, ticket_description, clarified_output, feedback_type, comment)
-            VALUES (%s, %s, %s, %s, %s, %s)
-        """, (
-            feedback.install,
-            feedback.ticketData.get('title'),
-            feedback.ticketData.get('description'),
-            json.dumps(feedback.clarifiedOutput),
-            feedback.feedbackType,
-            feedback.comment
-        ))
-        conn.commit()
-        print(f"✅ Stored {feedback.feedbackType} feedback from {feedback.install}")
-    except Exception as e:
-        print(f"Error storing feedback: {e}")
-    finally:
-        conn.close()
 
 def get_plan_limits(plan_id: str) -> int:
     """Get clarification limit based on plan"""
@@ -1235,28 +1182,7 @@ async def get_analytics(install: str):
     finally:
         conn.close()
 
-
-@app.post("/feedback")
-async def submit_feedback(feedback: FeedbackInput):
-    """
-    Submit feedback (upvote/downvote) for model fine-tuning
-    
-    This helps improve the AI model by collecting user feedback on clarifications.
-    """
-    if feedback.feedbackType not in ['upvote', 'downvote']:
-        raise HTTPException(status_code=400, detail="Invalid feedback type. Must be 'upvote' or 'downvote'")
-    
-    try:
-        store_feedback(feedback)
-        return {
-            "status": "success",
-            "message": "Thank you for your feedback! This helps us improve."
-        }
-    except Exception as e:
-        print(f"Feedback error: {e}")
-        raise HTTPException(status_code=500, detail="Failed to store feedback")
-
-
+ 
 @app.post("/validate-key", response_model=AccessKeyResponse)
 async def validate_license_key(request: Request, key_input: AccessKeyInput):
     """
@@ -1517,39 +1443,7 @@ async def get_license_key_by_payment(payment_intent_id: str):
         
     finally:
         conn.close()
- 
-@app.get("/feedback/stats")
-async def get_feedback_stats():
-    """Get feedback statistics for monitoring model performance"""
-    if not DATABASE_URL:
-        raise HTTPException(status_code=404, detail="Database not configured")
-    
-    conn = get_db_connection()
-    if not conn:
-        raise HTTPException(status_code=500, detail="Database unavailable")
-    
-    try:
-        cur = conn.cursor()
-        
-        cur.execute("""
-            SELECT 
-                feedback_type,
-                COUNT(*) as count,
-                COUNT(DISTINCT install) as unique_orgs
-            FROM feedback
-            WHERE created_at > NOW() - INTERVAL '30 days'
-            GROUP BY feedback_type
-        """)
-        
-        stats = cur.fetchall()
-        
-        return {
-            "period": "Last 30 days",
-            "feedback": [dict(s) for s in stats]
-        }
-        
-    finally:
-        conn.close()
+  
 
 @app.post("/create-payment-intent")
 async def create_payment_intent(input: CreatePaymentIntentInput):

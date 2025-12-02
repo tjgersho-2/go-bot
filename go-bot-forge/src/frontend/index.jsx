@@ -31,7 +31,6 @@ const App = () => {
     const [isInitializing, setInitializing] = useState(true); // New: for initial load
     const [error, setError] = useState(null);
     const [issueDetails, setIssueDetails] = useState(null);
-    const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
     const [clarifyCustomPrompt, setClarifyCustomPrompt] = useState(null);
     const [codeGenCustomPrompt, setCodeGenCustomPrompt]  = useState(null);
     const [showCustomPromptForm, setShowCustomPromptForm] = useState(false);
@@ -41,8 +40,9 @@ const App = () => {
     const [install, setInstall] = useState(null);
     const [plan, setPlan] = useState('free');
     const [isValidatingKey, setValidatingKey] = useState(false);
+    const [codeSaved, setCodeSaved] = useState(false);
     
-    const POLL_INTERVAL = 2000; // Poll every 2 seconds
+    const POLL_INTERVAL = 3000; // Poll every 2 seconds
 
     const pollJobStatus = async (jobId, onComplete, onError) => {
         const poll = async () => {
@@ -351,7 +351,6 @@ const App = () => {
         if (issueDetails) {
             setAnalyzing(true);
             setError(null);
-            setFeedbackSubmitted(false);
             
             try {
                 // Start the job (returns immediately)
@@ -437,7 +436,6 @@ const App = () => {
         if (clarifiedData) {
             setAnalyzing(true);
             setError(null);
-            setFeedbackSubmitted(false);
             
             try {
                 const formattedDescription = formatClarifiedDescription(
@@ -483,20 +481,6 @@ const App = () => {
         }
       };
 
-    const submitFeedback = async (feedbackType) => {
-        if (!clarifiedData || !issueDetails) return;
-        try {
-            await invoke('submitFeedback', {
-                ticketData: issueDetails,
-                clarifiedOutput: clarifiedData,
-                feedbackType: feedbackType,
-                install: install || 'unknown'
-            });
-            setFeedbackSubmitted(true);
-        } catch (err) {
-            console.error('Feedback error:', err);
-        }
-    };
 
     const applyToTicket = async () => {
         setLoading(true);
@@ -534,7 +518,6 @@ const App = () => {
       setClarifyCustomPrompt(null);
       setCodeGenCustomPrompt(null);
       setError(null);
-      setFeedbackSubmitted(false);
       setCodeSaved(false);
       const issueId = context?.extension.issue.id;
       getIssueData(issueId).then(setIssueDetails);
@@ -560,7 +543,7 @@ const App = () => {
                   <Box backgroundColor="color.background.neutral" padding="space.100">
                       <Text>
                           <Text style={{ whiteSpace: 'pre-wrap', fontFamily: 'monospace', fontSize: '11px' }}>
-                              {implementation}
+                              {implementation.substring(0, 100)}...
                           </Text>
                       </Text>
                   </Box>
@@ -635,7 +618,7 @@ const App = () => {
         return (
           <Box>
             <Text>⏳ {codeImplementation || clarifiedData?.applied ? 'Generating code' : 'Analyzing ticket'}...</Text>
-            <Text><Em>This can take up to 60 seconds...</Em></Text>
+            <Text><Em>This can take up to {codeImplementation || clarifiedData?.applied ? '90' : '60'} seconds...</Em></Text>
           </Box>
         );
       }
@@ -695,23 +678,6 @@ const App = () => {
                   >GoBot Code Again</Button>
                   <Button onClick={resetAnalysis}>Reset</Button>
                 </ButtonGroup>
-                {!feedbackSubmitted ? (
-                  <Box>
-                    <Text><Em>Code generation good?</Em></Text>
-                    <ButtonGroup>
-                      <Button onClick={() => submitFeedback('upvote')}>
-                        👍 Yes
-                      </Button>
-                      <Button onClick={() => submitFeedback('downvote')}>
-                        👎 No
-                      </Button>
-                    </ButtonGroup>
-                  </Box>
-                ) : (
-                  <SectionMessage appearance="confirmation">
-                    <Text>Thank you for your feedback!</Text>
-                  </SectionMessage>
-                )}
               </Box>
             );
           } else {
@@ -737,23 +703,6 @@ const App = () => {
                     <Button onClick={() => setShowCustomPromptForm(true)}>Custom Prompt</Button>
                   )}
                   <Button onClick={goBotCode} appearance="primary">GoBot Code!</Button>
-                  {!feedbackSubmitted ? (
-                    <Box>
-                      <Text><Em>Scope clarification good?</Em></Text>
-                      <ButtonGroup>
-                        <Button onClick={() => submitFeedback('upvote')}>
-                          👍 Yes
-                        </Button>
-                        <Button onClick={() => submitFeedback('downvote')}>
-                          👎 No
-                        </Button>
-                      </ButtonGroup>
-                    </Box>
-                  ) : (
-                    <SectionMessage appearance="confirmation">
-                      <Text>Thank you for your feedback!</Text>
-                    </SectionMessage>
-                  )}
                 </Box>
               );
             } else {

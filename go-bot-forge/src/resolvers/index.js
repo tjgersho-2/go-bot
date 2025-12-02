@@ -295,42 +295,5 @@ resolver.define('validateAccessKey', async ({ payload }) => {
     };
   }
 });
-
-/**
- * Submit feedback (upvote/downvote)
- */
-resolver.define('submitFeedback', async ({ payload }) => {
-  const { ticketData, clarifiedOutput, feedbackType, orgId } = payload;
-  
-  try {
-    const response = await fetch(`${API_BASE_URL}/feedback`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        ticketData: ticketData,
-        clarifiedOutput: clarifiedOutput,
-        feedbackType: feedbackType,
-        orgId: orgId,
-        comment: null
-      })
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Feedback submission failed: ${response.status}`);
-    }
-    
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error('Feedback submission error:', error);
-    // Don't throw error for feedback - just log it
-    return {
-      status: 'error',
-      message: 'Failed to submit feedback'
-    };
-  }
-});
-
+ 
 export const handler = resolver.getDefinitions();
