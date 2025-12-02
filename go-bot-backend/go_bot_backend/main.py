@@ -31,8 +31,6 @@ import secrets
 import string
 from datetime import datetime, timedelta
 
-
-
 load_dotenv()
 
 # ============================================================================
@@ -40,13 +38,11 @@ load_dotenv()
 # ============================================================================
 
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
-PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
 DATABASE_URL = os.getenv("DATABASE_URL")
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
 STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY")
 STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
-ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
-
+ 
 # Feature flags
 ENABLE_RAG = os.getenv("ENABLE_RAG", "false").lower() == "true"
 ENABLE_RATE_LIMITING = os.getenv("ENABLE_RATE_LIMITING", "true").lower() == "true"
@@ -57,10 +53,6 @@ ENABLE_ANALYTICS = os.getenv("ENABLE_ANALYTICS", "true").lower() == "true"
 RATE_LIMIT_FREE = int(os.getenv("RATE_LIMIT_FREE", "5"))  # per month
 RATE_LIMIT_PRO = int(os.getenv("RATE_LIMIT_PRO", "999999"))  # unlimited
 RATE_LIMIT_WINDOW = int(os.getenv("RATE_LIMIT_WINDOW", "60"))  # seconds
-
-JWT_SECRET = os.getenv("JWT_SECRET", secrets.token_urlsafe(32))
-JWT_ALGORITHM = "HS256"
-JWT_EXPIRATION_HOURS = 24 * 30  # 30 days
 
 # ============================================================================
 # Initialize Services
@@ -74,13 +66,7 @@ async def lifespan(app: FastAPI):
     
     # Initialize Claude
     app.state.claude = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY) if ANTHROPIC_API_KEY else None
-    
-    # Initialize Pinecone (optional)
-    if ENABLE_RAG and PINECONE_API_KEY:
-        app.state.pc = Pinecone(api_key=PINECONE_API_KEY)
-        app.state.index = app.state.pc.Index("jira-vectors")
-        print("✅ Pinecone initialized")
-    
+ 
     # Initialize Redis (optional)
     if ENABLE_RATE_LIMITING and REDIS_URL:
         try:
@@ -228,22 +214,7 @@ def init_database():
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
-                
-        # Tickets table for analytics
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS tickets (
-                id SERIAL PRIMARY KEY,
-                install VARCHAR(255),
-                ticket_title TEXT,
-                ticket_description TEXT,
-                issue_type VARCHAR(50),
-                priority VARCHAR(50),
-                clarified_output JSONB,
-                processing_time FLOAT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-        
+ 
  
         """Add these table creations to your init_database() function"""
         
@@ -280,7 +251,6 @@ def init_database():
         
         # Create indexes
         cur.execute("CREATE INDEX IF NOT EXISTS idx_install ON organizations(install)")
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_tickets_org ON tickets(install)")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_license_key_code ON license_keys(key_code)")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_license_email ON license_keys(customer_email)")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_license_subscription ON license_keys(stripe_subscription_id)")
@@ -407,22 +377,6 @@ def send_license_key_email(email: str, license_key: str, plan_name: str, clarifi
 # AI Processing
 # ============================================================================
 
-async def get_similar_tickets(description: str, install: str) -> List[Dict]:
-    """Get similar tickets using RAG (Pinecone)"""
-    if not ENABLE_RAG or not hasattr(app.state, 'index'):
-        return []
-    
-    try:
-        # Get embedding from Claude (or use OpenAI if preferred)
-        # For now, return empty - you'd implement actual embedding here
-        # This would require an embedding model
-        return []
-    except Exception as e:
-        print(f"RAG error: {e}")
-        return []
-
-
-
 async def generate_code(input: CodeGenInput) -> CodeGenOutput:
     """Generate MVP code implementation using Claude AI"""
     start_time = datetime.now()
@@ -526,44 +480,6 @@ Generate the implementation now:"""
         raise HTTPException(status_code=500, detail=f"AI processing failed: {str(e)}")
 
 
-def store_code_generation(input: CodeGenInput, output: CodeGenOutput):
-    """Store code generation for analytics"""
-    if not ENABLE_ANALYTICS or not DATABASE_URL:
-        return
-    
-    conn = get_db_connection()
-    if not conn:
-        return
-    
-    try:
-        cur = conn.cursor()
-        cur.execute("""
-            INSERT INTO tickets 
-            (install, ticket_title, ticket_description, issue_type, priority, clarified_output, processing_time)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
-        """, (
-            input.install or 'unknown',
-            "[CODE_GEN]",
-            input.jiraDescription[:500],  # Store first 500 chars
-            "code_generation",
-            "normal",
-            json.dumps({
-                "type": "code_generation",
-                "files": [f.dict() for f in output.files],
-                "summary": output.summary,
-                "techStack": output.techStack,
-                "customPrompt": input.customPrompt
-            }),
-            output.processingTime
-        ))
-        conn.commit()
-    except Exception as e:
-        print(f"Error storing code generation: {e}")
-    finally:
-        conn.close()
-
-
-
 async def generate_clarification(ticket: TicketInput) -> ClarifiedOutput:
     """Generate clarification using Claude AI"""
     start_time = datetime.now()
@@ -571,9 +487,7 @@ async def generate_clarification(ticket: TicketInput) -> ClarifiedOutput:
     if not app.state.claude:
         raise HTTPException(status_code=500, detail="AI service not configured")
     
-    # Get similar tickets for context (optional)
-    similar_tickets = await get_similar_tickets(ticket.description, ticket.install or "unknown")
-    
+ 
     # Build prompt
     prompt = f"""You are a senior software engineer helping to clarify Jira tickets. Given the following ticket information, provide clear, actionable acceptance criteria and additional details.
 
@@ -581,8 +495,6 @@ Ticket Title: {ticket.title}
 Description: {ticket.description or 'No description provided'}
 Issue Type: {ticket.issueType}
 Priority: {ticket.priority}
-
-{"Similar past tickets for context:" + json.dumps(similar_tickets, indent=2) if similar_tickets else ""}
 
 Please provide a structured response with:
 1. Acceptance Criteria (specific, testable conditions using Given-When-Then format where appropriate)
@@ -650,36 +562,7 @@ Focus on being practical and actionable. Provide at least 3-5 items for each cat
         print(f"AI generation error: {e}")
         raise HTTPException(status_code=500, detail=f"AI processing failed: {str(e)}")
 
-def store_ticket(ticket: TicketInput, output: ClarifiedOutput):
-    """Store ticket for analytics and future training"""
-    if not ENABLE_ANALYTICS or not DATABASE_URL:
-        return
-    
-    conn = get_db_connection()
-    if not conn:
-        return
-    
-    try:
-        cur = conn.cursor()
-        cur.execute("""
-            INSERT INTO tickets 
-            (install, ticket_title, ticket_description, issue_type, priority, clarified_output, processing_time)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
-        """, (
-            ticket.install or 'unknown',
-            ticket.title,
-            ticket.description,
-            ticket.issueType,
-            ticket.priority,
-            json.dumps(output.dict()),
-            output.processingTime
-        ))
-        conn.commit()
-    except Exception as e:
-        print(f"Error storing ticket: {e}")
-    finally:
-        conn.close()
-
+ 
 # ============================================================================
 # API Endpoints
 # ============================================================================
@@ -709,7 +592,6 @@ async def health_check():
             "claude": app.state.claude is not None,
             "redis": hasattr(app.state, 'redis') and app.state.redis is not None,
             "database": DATABASE_URL is not None,
-            "pinecone": hasattr(app.state, 'index')
         }
     }
     return health
@@ -751,12 +633,7 @@ async def clarify_ticket(ticket: TicketInput):
     
     # Generate clarification (existing logic)
     try:
-        output = await generate_clarification(ticket)
-        
-        # Store for analytics
-        if ENABLE_ANALYTICS:
-            store_ticket(ticket, output)
-        
+        output = await generate_clarification(ticket)        
         return output
         
     except Exception as e:
@@ -833,11 +710,6 @@ async def generate_code_endpoint(input: CodeGenInput):
     # Generate code
     try:
         output = await generate_code(input)
-        
-        # Store for analytics
-        if ENABLE_ANALYTICS:
-            store_code_generation(input, output)
-        
         return output
         
     except HTTPException:
@@ -1135,53 +1007,7 @@ async def get_license_key_by_payment_intent(payment_intent_id: str):
         print("Error getting licence key.")
     finally:
         conn.close()
-        
-
-@app.get("/analytics/{install}")
-async def get_analytics(install: str):
-    """Get analytics for an organization"""
-    if not ENABLE_ANALYTICS or not DATABASE_URL:
-        raise HTTPException(status_code=404, detail="Analytics not enabled")
-    
-    conn = get_db_connection()
-    if not conn:
-        raise HTTPException(status_code=500, detail="Database unavailable")
-    
-    try:
-        cur = conn.cursor()
-        
-        # Get ticket stats
-        cur.execute("""
-            SELECT 
-                COUNT(*) as total_tickets,
-                AVG(processing_time) as avg_processing_time,
-                COUNT(DISTINCT DATE(created_at)) as active_days
-            FROM tickets
-            WHERE install = %s
-            AND created_at > NOW() - INTERVAL '30 days'
-        """, (install,))
-        stats = cur.fetchone()
-        
-        # Get ticket types breakdown
-        cur.execute("""
-            SELECT issue_type, COUNT(*) as count
-            FROM tickets
-            WHERE install = %s
-            AND created_at > NOW() - INTERVAL '30 days'
-            GROUP BY issue_type
-        """, (install,))
-        types = cur.fetchall()
-        
-        return {
-            "totalTickets": stats['total_tickets'] if stats else 0,
-            "avgProcessingTime": float(stats['avg_processing_time']) if stats and stats['avg_processing_time'] else 0,
-            "activeDays": stats['active_days'] if stats else 0,
-            "ticketTypes": [dict(t) for t in types] if types else []
-        }
-        
-    finally:
-        conn.close()
-
+  
  
 @app.post("/validate-key", response_model=AccessKeyResponse)
 async def validate_license_key(request: Request, key_input: AccessKeyInput):
