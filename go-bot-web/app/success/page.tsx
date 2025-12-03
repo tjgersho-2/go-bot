@@ -4,29 +4,42 @@ import { useEffect, useState, Suspense } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { CheckCircle2, Copy, Mail, ExternalLink, Sparkles, AlertCircle, Bot, Rocket, Code } from 'lucide-react';
+import { CheckCircle2, Copy, Mail, ExternalLink, Sparkles, AlertCircle, Bot, Rocket, Code, Gift } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 
 function SuccessContent() {
   const searchParams = useSearchParams();
-  const paymentIntentId = searchParams.get('payment_intent');
-  const planParam = searchParams.get('plan');
   
-  const [licenseKey, setLicenseKey] = useState<string | null>(null);
-  const [customerEmail, setCustomerEmail] = useState<string | null>(null);
-  const [plan, setPlan] = useState<string>(planParam || 'Pro');
-  const [loading, setLoading] = useState(true);
+  // Check for different flows
+  const paymentIntentId = searchParams.get('payment_intent');
+  const directKey = searchParams.get('key');
+  const planParam = searchParams.get('plan');
+  const emailParam = searchParams.get('email');
+  const isExisting = searchParams.get('existing') === 'true';
+  
+  const [licenseKey, setLicenseKey] = useState<string | null>(directKey);
+  const [customerEmail, setCustomerEmail] = useState<string | null>(emailParam ? decodeURIComponent(emailParam) : null);
+  const [plan, setPlan] = useState<string>(planParam ? planParam.charAt(0).toUpperCase() + planParam.slice(1) : 'Pro');
+  const [loading, setLoading] = useState(!directKey); // Don't load if we have direct key
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [isFreeFlow, setIsFreeFlow] = useState(planParam === 'free');
 
   useEffect(() => {
+    // If we have a direct key (from free flow), we're done
+    if (directKey) {
+      setLoading(false);
+      return;
+    }
+    
+    // Otherwise, fetch from payment intent (paid flow)
     if (paymentIntentId) {
       fetchLicenseKey();
-    } else {
+    } else if (!directKey) {
       setError('No payment information found');
       setLoading(false);
     }
-  }, [paymentIntentId]);
+  }, [paymentIntentId, directKey]);
 
   const fetchLicenseKey = async () => {
     try {
@@ -66,7 +79,7 @@ function SuccessContent() {
   };
 
   const openForgeInstall = () => {
-    const link = "https://developer.atlassian.com/console/install/bada8dda-801f-4a83-84eb-efd1800033a0?signature=...";
+    const link = "https://developer.atlassian.com/console/install/bada8dda-801f-4a83-84eb-efd1800033a0?signature=AYABeAT71EgvXekiKwmJpduqx%2B0AAAADAAdhd3Mta21zAEthcm46YXdzOmttczp1cy13ZXN0LTI6NzA5NTg3ODM1MjQzOmtleS83MDVlZDY3MC1mNTdjLTQxYjUtOWY5Yi1lM2YyZGNjMTQ2ZTcAuAECAQB4IOp8r3eKNYw8z2v%2FEq3%2FfvrZguoGsXpNSaDveR%2FF%2Fo0BUN4ZU97WKKMDQ7ILu2MAVQAAAH4wfAYJKoZIhvcNAQcGoG8wbQIBADBoBgkqhkiG9w0BBwEwHgYJYIZIAWUDBAEuMBEEDA0a%2FMQZHjpdqBuAYAIBEIA7oUEjNpdWL355lFAgOBgQq7E3vbz%2B1nlrmFkv80L9ldIGSWu%2FozfcLcY%2FW8vKjVYddM8eyvF8K4kyrSwAB2F3cy1rbXMAS2Fybjphd3M6a21zOmV1LXdlc3QtMTo3MDk1ODc4MzUyNDM6a2V5LzQ2MzBjZTZiLTAwYzMtNGRlMi04NzdiLTYyN2UyMDYwZTVjYwC4AQICAHijmwVTMt6Oj3F%2B0%2B0cVrojrS8yZ9ktpdfDxqPMSIkvHAGNU02wXE2IAHx%2FsaqvbriCAAAAfjB8BgkqhkiG9w0BBwagbzBtAgEAMGgGCSqGSIb3DQEHATAeBglghkgBZQMEAS4wEQQMcfGVT1jB1SZz59MnAgEQgDvLI35N086g6pTvEMblitvsEqH3NgcM7fNSVQMPHxz4QdaczmIZVXNeq6ugkOyzBAlR%2FECsscbUelOTngAHYXdzLWttcwBLYXJuOmF3czprbXM6dXMtZWFzdC0xOjcwOTU4NzgzNTI0MzprZXkvNmMxMjBiYTAtNGNkNS00OTg1LWI4MmUtNDBhMDQ5NTJjYzU3ALgBAgIAeLKa7Dfn9BgbXaQmJGrkKztjV4vrreTkqr7wGwhqIYs5ATp%2F%2B5H4nJ2Zj9TVPqz%2BKf0AAAB%2BMHwGCSqGSIb3DQEHBqBvMG0CAQAwaAYJKoZIhvcNAQcBMB4GCWCGSAFlAwQBLjARBAxdd8v4oydTbVovr9cCARCAO5EoRTKqX1DCoCPeJ6ebvVAwATeF5QYiSXPjTLdBh7we8UoEhrCnvFFNsk2Ve0GavqQvp8KRR404DbQiAgAAAAAMAAAQAAAAAAAAAAAAAAAAALiv0kuT%2BKg8OtcV9hZbrGT%2F%2F%2F%2F%2FAAAAAQAAAAAAAAAAAAAAAQAAADJYhTGd2uk6Z1KKOGyDPQ7ptxcdcYQ2dcqHbcnK1pLLxqOJch1qaIXAhKK8hyLt%2FfAMQP9se3UKRXG2uEyfo98YBKU%3D&product=jira";
     window.open(link, '_blank', 'noopener,noreferrer');
   };
 
@@ -94,8 +107,16 @@ function SuccessContent() {
             transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
             className="flex justify-center mb-8"
           >
-            <div className="w-20 h-20 bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-full flex items-center justify-center">
-              <CheckCircle2 className="w-12 h-12 text-white" />
+            <div className={`w-20 h-20 rounded-full flex items-center justify-center ${
+              isFreeFlow 
+                ? 'bg-gradient-to-r from-cyan-500 to-teal-500'
+                : 'bg-gradient-to-r from-emerald-500 to-cyan-500'
+            }`}>
+              {isFreeFlow ? (
+                <Gift className="w-12 h-12 text-white" />
+              ) : (
+                <CheckCircle2 className="w-12 h-12 text-white" />
+              )}
             </div>
           </motion.div>
 
@@ -106,7 +127,10 @@ function SuccessContent() {
             transition={{ delay: 0.3 }}
             className="text-4xl font-bold text-center text-white mb-4"
           >
-            Payment Successful! 🎉
+            {isFreeFlow 
+              ? (isExisting ? 'Welcome Back! 👋' : 'You\'re All Set! 🎉')
+              : 'Payment Successful! 🎉'
+            }
           </motion.h1>
 
           <motion.p
@@ -115,7 +139,12 @@ function SuccessContent() {
             transition={{ delay: 0.4 }}
             className="text-center text-slate-300 mb-8"
           >
-            Welcome to GoBot! Your license key is ready.
+            {isFreeFlow
+              ? (isExisting 
+                  ? 'Your existing license key is ready to use.'
+                  : 'Your free license key has been created and sent to your email.')
+              : `Welcome to GoBot ${plan}! Your license key is ready.`
+            }
           </motion.p>
 
           {/* License Key Section */}
@@ -130,7 +159,7 @@ function SuccessContent() {
               <AlertCircle className="w-12 h-12 text-orange-400 mx-auto mb-4" />
               <p className="text-slate-300 mb-4">{error}</p>
               <p className="text-slate-400 text-sm mb-6">
-                Don't worry! Your payment was successful. Your license key will be sent to your email shortly.
+                Don't worry! Your license key will be sent to your email shortly.
               </p>
               <Button 
                 onClick={() => window.location.href = '/'}
@@ -170,10 +199,26 @@ function SuccessContent() {
                 {customerEmail && (
                   <p className="text-sm text-slate-400 mt-3 flex items-center gap-2">
                     <Mail className="w-4 h-4" />
-                    A copy has been sent to {customerEmail}
+                    {isExisting 
+                      ? `Associated with ${customerEmail}`
+                      : `A copy has been sent to ${customerEmail}`
+                    }
                   </p>
                 )}
               </div>
+
+              {/* Plan Info for Free Users */}
+              {isFreeFlow && (
+                <div className="bg-cyan-500/10 border border-cyan-500/30 rounded-xl p-4 mb-6">
+                  <div className="flex items-center gap-3">
+                    <Gift className="w-5 h-5 text-cyan-400" />
+                    <div>
+                      <p className="text-white font-medium">Free Plan</p>
+                      <p className="text-sm text-slate-400">5 tickets per month • Upgrade anytime for more</p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Activation Steps */}
               <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-6 mb-6">
@@ -204,13 +249,13 @@ function SuccessContent() {
               </div>
 
               {/* What's next */}
-              <div className="bg-cyan-500/10 border border-cyan-500/30 rounded-xl p-6 mb-6">
+              <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6 mb-6">
                 <h4 className="font-semibold text-white mb-3 flex items-center gap-2">
                   <Code className="w-5 h-5 text-cyan-400" />
                   What happens next?
                 </h4>
                 <p className="text-slate-300 text-sm">
-                  Once activated, GoBot will analyze your Jira tickets and generate clear acceptance criteria plus working MVP code. Just click "Go" on any ticket!
+                  Once activated, GoBot will analyze your Jira tickets and generate clear acceptance criteria plus working MVP code. Just click "GoBot" on any ticket!
                 </p>
               </div>
 
@@ -233,6 +278,20 @@ function SuccessContent() {
                   Back to Home
                 </Button>
               </div>
+
+              {/* Upgrade CTA for Free Users */}
+              {isFreeFlow && (
+                <div className="mt-6 text-center">
+                  <p className="text-slate-400 text-sm mb-2">Need more tickets?</p>
+                  <Button
+                    onClick={() => window.location.href = '/checkout'}
+                    variant="link"
+                    className="text-emerald-400 hover:text-emerald-300"
+                  >
+                    Upgrade to Pro for 100 tickets/month →
+                  </Button>
+                </div>
+              )}
             </motion.div>
           ) : null}
 
@@ -247,15 +306,15 @@ function SuccessContent() {
               Need help activating your license?
             </p>
             <div className="flex justify-center gap-4 text-sm">
-              <a
-                href="mailto:support@gobot.dev"
+              
+              <a  href="mailto:support@gobot.dev"
                 className="text-emerald-400 hover:text-emerald-300"
               >
                 Email Support
               </a>
               <span className="text-slate-600">•</span>
-              <a
-                href="/docs"
+              
+              <a  href="/docs"
                 className="text-emerald-400 hover:text-emerald-300"
               >
                 Documentation

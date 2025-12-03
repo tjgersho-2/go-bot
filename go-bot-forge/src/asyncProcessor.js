@@ -1,7 +1,7 @@
 import { storage } from '@forge/api';
 import api, { fetch } from '@forge/api';
 
-const API_BASE_URL = 'https://jira-clarifier-production.up.railway.app';
+const API_BASE_URL = 'https://go-bot-production-b18c.up.railway.app';
 
 // V2 style - direct function export, receives AsyncEvent
 export async function handler(event, context) {

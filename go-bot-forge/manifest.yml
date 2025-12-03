@@ -31,7 +31,8 @@ permissions:
     - write:jira-work
     - read:jira-work
     - storage:app
+    - write:attachment:jira
   external:
     fetch:
       backend:
-        - address: jira-clarifier-production.up.railway.app
+        - address: go-bot-production-b18c.up.railway.app

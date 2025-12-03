@@ -1,20 +1,23 @@
 'use client';
 
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle2, ArrowRight, Shield, Zap, Users, Star, Sparkles, TrendingUp, Bot, Code, Rocket } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { CheckCircle2, ArrowRight, Shield, Zap, Users, Star, Sparkles, TrendingUp, Bot, Code, Rocket, X, Mail } from 'lucide-react';
 import { useState } from 'react';
-import { useSearchParams } from 'next/navigation';
 import { useRouter } from 'next/navigation';
 
 export default function CheckoutPage() {
-  // const searchParams = useSearchParams();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState<string | null>(null);
   
-  // const preSelectedPlan = searchParams.get('plan') || 'pro';
+  // Free plan modal state
+  const [showFreeModal, setShowFreeModal] = useState(false);
+  const [freeEmail, setFreeEmail] = useState('');
+  const [freeEmailError, setFreeEmailError] = useState<string | null>(null);
+  const [isSubmittingFree, setIsSubmittingFree] = useState(false);
 
   const plans = [
     {
@@ -102,10 +105,57 @@ export default function CheckoutPage() {
     }
   ];
 
+  const validateEmail = (email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const handleFreeSubmit = async () => {
+    setFreeEmailError(null);
+    
+    if (!freeEmail.trim()) {
+      setFreeEmailError('Please enter your email address');
+      return;
+    }
+    
+    if (!validateEmail(freeEmail)) {
+      setFreeEmailError('Please enter a valid email address');
+      return;
+    }
+    
+    setIsSubmittingFree(true);
+    
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_GOBOT_URL}/create-free-key`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email: freeEmail.trim() }),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || 'Failed to create license key');
+      }
+      
+      const data = await response.json();
+      
+      // Redirect to success page with key info
+      router.push(`/success?key=${data.keyCode}&plan=free&email=${encodeURIComponent(data.email)}&existing=${data.isExisting}`);
+      
+    } catch (err: any) {
+      console.error('Error creating free key:', err);
+      setFreeEmailError(err.message || 'Failed to create license key. Please try again.');
+    } finally {
+      setIsSubmittingFree(false);
+    }
+  };
+
   const handleCheckout = async (planId: string, priceId: string | null) => {
-    // Handle free plan
+    // Handle free plan - show email modal
     if (planId === 'free') {
-      window.location.href = 'https://developer.atlassian.com/console/install/bada8dda-801f-4a83-84eb-efd1800033a0?signature=AYABeAT71EgvXekiKwmJpduqx%2B0AAAADAAdhd3Mta21zAEthcm46YXdzOmttczp1cy13ZXN0LTI6NzA5NTg3ODM1MjQzOmtleS83MDVlZDY3MC1mNTdjLTQxYjUtOWY5Yi1lM2YyZGNjMTQ2ZTcAuAECAQB4IOp8r3eKNYw8z2v%2FEq3%2FfvrZguoGsXpNSaDveR%2FF%2Fo0BUN4ZU97WKKMDQ7ILu2MAVQAAAH4wfAYJKoZIhvcNAQcGoG8wbQIBADBoBgkqhkiG9w0BBwEwHgYJYIZIAWUDBAEuMBEEDA0a%2FMQZHjpdqBuAYAIBEIA7oUEjNpdWL355lFAgOBgQq7E3vbz%2B1nlrmFkv80L9ldIGSWu%2FozfcLcY%2FW8vKjVYddM8eyvF8K4kyrSwAB2F3cy1rbXMAS2Fybjphd3M6a21zOmV1LXdlc3QtMTo3MDk1ODc4MzUyNDM6a2V5LzQ2MzBjZTZiLTAwYzMtNGRlMi04NzdiLTYyN2UyMDYwZTVjYwC4AQICAHijmwVTMt6Oj3F%2B0%2B0cVrojrS8yZ9ktpdfDxqPMSIkvHAGNU02wXE2IAHx%2FsaqvbriCAAAAfjB8BgkqhkiG9w0BBwagbzBtAgEAMGgGCSqGSIb3DQEHATAeBglghkgBZQMEAS4wEQQMcfGVT1jB1SZz59MnAgEQgDvLI35N086g6pTvEMblitvsEqH3NgcM7fNSVQMPHxz4QdaczmIZVXNeq6ugkOyzBAlR%2FECsscbUelOTngAHYXdzLWttcwBLYXJuOmF3czprbXM6dXMtZWFzdC0xOjcwOTU4NzgzNTI0MzprZXkvNmMxMjBiYTAtNGNkNS00OTg1LWI4MmUtNDBhMDQ5NTJjYzU3ALgBAgIAeLKa7Dfn9BgbXaQmJGrkKztjV4vrreTkqr7wGwhqIYs5ATp%2F%2B5H4nJ2Zj9TVPqz%2BKf0AAAB%2BMHwGCSqGSIb3DQEHBqBvMG0CAQAwaAYJKoZIhvcNAQcBMB4GCWCGSAFlAwQBLjARBAxdd8v4oydTbVovr9cCARCAO5EoRTKqX1DCoCPeJ6ebvVAwATeF5QYiSXPjTLdBh7we8UoEhrCnvFFNsk2Ve0GavqQvp8KRR404DbQiAgAAAAAMAAAQAAAAAAAAAAAAAAAAALiv0kuT%2BKg8OtcV9hZbrGT%2F%2F%2F%2F%2FAAAAAQAAAAAAAAAAAAAAAQAAADJYhTGd2uk6Z1KKOGyDPQ7ptxcdcYQ2dcqHbcnK1pLLxqOJch1qaIXAhKK8hyLt%2FfAMQP9se3UKRXG2uEyfo98YBKU%3D&product=jira';
+      setShowFreeModal(true);
       return;
     }
     
@@ -122,8 +172,6 @@ export default function CheckoutPage() {
     }
 
     setIsLoading(planId);
-    
-    // Navigate to the payment page with the selected plan
     router.push(`/payment?plan=${planId}`);
   };
 
@@ -136,6 +184,116 @@ export default function CheckoutPage() {
         <div className="absolute bottom-0 left-1/2 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl" />
       </div>
       <div className="fixed inset-0 bg-[linear-gradient(to_right,#4f4f4f2e_1px,transparent_1px),linear-gradient(to_bottom,#4f4f4f2e_1px,transparent_1px)] bg-[size:14px_24px] pointer-events-none" />
+
+      {/* Free Plan Email Modal */}
+      <AnimatePresence>
+        {showFreeModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            onClick={() => setShowFreeModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-md"
+            >
+              <Card className="p-8 bg-slate-900/95 backdrop-blur-xl border-slate-700">
+                <div className="flex justify-between items-start mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center">
+                      <Bot className="w-7 h-7 text-white" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold text-white">Get Started Free</h2>
+                      <p className="text-sm text-slate-400">5 tickets/month included</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowFreeModal(false)}
+                    className="text-slate-400 hover:text-white transition"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <p className="text-slate-300 mb-6">
+                  Enter your email to receive your free license key. We'll send it right away!
+                </p>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Email Address
+                    </label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                      <Input
+                        type="email"
+                        placeholder="you@company.com"
+                        value={freeEmail}
+                        onChange={(e) => {
+                          setFreeEmail(e.target.value);
+                          setFreeEmailError(null);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            handleFreeSubmit();
+                          }
+                        }}
+                        className="pl-10 bg-slate-800/50 border-slate-700 text-white placeholder:text-slate-500 focus:border-emerald-500"
+                      />
+                    </div>
+                    {freeEmailError && (
+                      <p className="text-sm text-red-400 mt-2">{freeEmailError}</p>
+                    )}
+                  </div>
+
+                  <Button
+                    onClick={handleFreeSubmit}
+                    disabled={isSubmittingFree}
+                    className="w-full h-12 bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-700 hover:to-cyan-700"
+                  >
+                    {isSubmittingFree ? (
+                      <span className="flex items-center gap-2">
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        Creating your key...
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-2">
+                        Get Free License Key
+                        <ArrowRight className="w-4 h-4" />
+                      </span>
+                    )}
+                  </Button>
+
+                  <p className="text-xs text-slate-500 text-center">
+                    By continuing, you agree to our{' '}
+                    <a href="/terms" className="text-emerald-400 hover:underline">Terms</a>
+                    {' '}and{' '}
+                    <a href="/privacy" className="text-emerald-400 hover:underline">Privacy Policy</a>
+                  </p>
+                </div>
+
+                <div className="mt-6 pt-6 border-t border-slate-800">
+                  <div className="flex items-center gap-3 text-sm text-slate-400">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                    <span>No credit card required</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-sm text-slate-400 mt-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                    <span>Upgrade anytime to unlock more tickets</span>
+                  </div>
+                </div>
+              </Card>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Header */}
       <header className="relative z-10 border-b border-slate-800">
@@ -180,7 +338,7 @@ export default function CheckoutPage() {
           <div className="mt-6 p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-lg">
             <p className="text-sm text-emerald-300">
               <CheckCircle2 className="w-4 h-4 inline mr-2" />
-              After purchase, you'll receive a license key via email
+              After signup, you'll receive a license key via email
             </p>
           </div>
         </motion.div>
@@ -310,13 +468,13 @@ export default function CheckoutPage() {
                 </tr>
                 <tr>
                   <td className="p-4 text-slate-300">Full Code Generation</td>
-                  <td className="p-4 text-center text-slate-600">—</td>
+                  <td className="p-4 text-center"><CheckCircle2 className="w-5 h-5 text-emerald-400 mx-auto" /></td>
                   <td className="p-4 text-center"><CheckCircle2 className="w-5 h-5 text-emerald-400 mx-auto" /></td>
                   <td className="p-4 text-center"><CheckCircle2 className="w-5 h-5 text-emerald-400 mx-auto" /></td>
                 </tr>
                 <tr>
                   <td className="p-4 text-slate-300">All Frameworks</td>
-                  <td className="p-4 text-center text-slate-600">—</td>
+                  <td className="p-4 text-center"><CheckCircle2 className="w-5 h-5 text-emerald-400 mx-auto" /></td>
                   <td className="p-4 text-center"><CheckCircle2 className="w-5 h-5 text-emerald-400 mx-auto" /></td>
                   <td className="p-4 text-center"><CheckCircle2 className="w-5 h-5 text-emerald-400 mx-auto" /></td>
                 </tr>

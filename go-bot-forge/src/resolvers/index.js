@@ -5,7 +5,7 @@ import { kvs as storage } from '@forge/kvs';
 import { v4 as uuidv4 } from 'uuid';
 
 // Base API URL - use environment variable or hardcode
-const API_BASE_URL = 'https://jira-clarifier-production.up.railway.app';
+const API_BASE_URL = 'https://go-bot-production-b18c.up.railway.app';
 
 const resolver = new Resolver();
 const queue = new Queue({ key: 'gobot-queue' });

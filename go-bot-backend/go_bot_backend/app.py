@@ -127,14 +127,6 @@ class CodeGenInput(BaseModel):
     install: Optional[str] = Field(default=None, description="Organization ID for auth")
     accessKey: Optional[str] = Field(default=None, description="License Key")
 
-class CodeFile(BaseModel):
-    """A single generated code file"""
-    filename: str = Field(..., description="Filename with extension")
-    language: str = Field(..., description="Programming language")
-    code: str = Field(..., description="The generated code")
-    description: str = Field(default="", description="Brief description of what this file does")
-
-
 class CodeGenOutput(BaseModel):
     """Output from code generation"""
     implementation: str = Field(..., description="Full implementation as markdown-formatted text")
@@ -159,11 +151,8 @@ class ClarifiedOutput(BaseModel):
     confidence: Optional[float] = Field(default=None, description="AI confidence score")
     processingTime: Optional[float] = Field(default=None, description="Processing time in seconds")
 
-class UsageStats(BaseModel):
-    clarificationsUsed: int
-    clarificationsRemaining: int
-    plan: str
-    resetDate: Optional[str]
+class CreateFreeKeyInput(BaseModel):
+    email: str = Field(..., description="Customer email address")
  
 class AccessKeyInput(BaseModel):
     accessKey: str = Field(..., description="License key to validate")
@@ -174,7 +163,7 @@ class AccessKeyResponse(BaseModel):
     install: Optional[str] = None
     plan: Optional[str] = None
     message: Optional[str] = None
-    clarificationsRemaining: Optional[int] = None
+    gobotsRemaining: Optional[int] = None
  
 class InstallData(BaseModel):
     install: str
@@ -212,8 +201,8 @@ def init_database():
                 id SERIAL PRIMARY KEY,
                 install VARCHAR(255) UNIQUE NOT NULL,
                 plan VARCHAR(50) NOT NULL DEFAULT 'free',
-                clarifications_limit INTEGER NOT NULL DEFAULT 5,
-                clarifications_used INTEGER DEFAULT 0,
+                gobot_limit INTEGER NOT NULL DEFAULT 5,
+                gobot_used INTEGER DEFAULT 0,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
@@ -238,8 +227,8 @@ def init_database():
                 stripe_payment_intent_id VARCHAR(255),
                     
                 -- Usage tracking
-                clarifications_limit INTEGER NOT NULL,
-                clarifications_used INTEGER DEFAULT 0,
+                gobot_limit INTEGER NOT NULL,
+                gobot_used INTEGER DEFAULT 0,
                 usage_resets_at TIMESTAMP,
                 
                 -- Status
@@ -301,7 +290,7 @@ def reset_monthly_usage():
         # Reset usage for active subscriptions where reset date has passed
         cur.execute("""
             UPDATE license_keys
-            SET clarifications_used = 0,
+            SET gobot_used = 0,
                 usage_resets_at = usage_resets_at + INTERVAL '1 month',
                 updated_at = NOW()
             WHERE is_active = true
@@ -320,7 +309,7 @@ def reset_monthly_usage():
         conn.close()
 
 def generate_license_key() -> str:
-    """Generate a unique license key in format JIRA-XXXX-XXXX-XXXX"""
+    """Generate a unique license key in format GOBOT-XXXX-XXXX-XXXX"""
     characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
     segments = 3
     segment_length = 4
@@ -330,9 +319,9 @@ def generate_license_key() -> str:
         segment = ''.join(secrets.choice(characters) for _ in range(segment_length))
         parts.append(segment)
     
-    return f"JIRA-{'-'.join(parts)}"
+    return f"GOBOT-{'-'.join(parts)}"
 
-def send_license_key_email(email: str, license_key: str, plan_name: str, clarifications_limit: int) -> bool:
+def send_license_key_email(email: str, license_key: str, plan_name: str, gobot_limit: int) -> bool:
     """
     Send license key via Mailgun email
     Returns True if sent successfully, False otherwise
@@ -341,7 +330,7 @@ def send_license_key_email(email: str, license_key: str, plan_name: str, clarifi
     # Check if Mailgun is configured
     if not MAILGUN_API_KEY or not MAILGUN_DOMAIN:
         print("⚠️ Mailgun not configured. Set MAILGUN_API_KEY and MAILGUN_DOMAIN env vars.")
-        _print_email_fallback(email, license_key, plan_name, clarifications_limit)
+        _print_email_fallback(email, license_key, plan_name, gobot_limit)
         return False
     
     subject = f"Your GoBot {plan_name} License Key 🎉"
@@ -356,7 +345,7 @@ Your License Key: {license_key}
 
 📊 Your Plan:
 - {plan_name} Subscription
-- {clarifications_limit} clarifications per month
+- {gobot_limit} clarifications per month
 - Renews automatically
 - Cancel anytime
 
@@ -407,7 +396,7 @@ The GoBot Team
         <h3 style="margin: 0 0 12px 0; color: #1e293b;">📊 Your Plan</h3>
         <ul style="margin: 0; padding-left: 20px; color: #64748b;">
             <li><strong>{plan_name}</strong> Subscription</li>
-            <li><strong>{clarifications_limit}</strong> clarifications per month</li>
+            <li><strong>{gobot_limit}</strong> clarifications per month</li>
             <li>Renews automatically</li>
             <li>Cancel anytime</li>
         </ul>
@@ -463,16 +452,16 @@ The GoBot Team
             return True
         else:
             print(f"❌ Mailgun error: {response.status_code} - {response.text}")
-            _print_email_fallback(email, license_key, plan_name, clarifications_limit)
+            _print_email_fallback(email, license_key, plan_name, gobot_limit)
             return False
             
     except requests.RequestException as e:
         print(f"❌ Failed to send email: {e}")
-        _print_email_fallback(email, license_key, plan_name, clarifications_limit)
+        _print_email_fallback(email, license_key, plan_name, gobot_limit)
         return False
 
 
-def _print_email_fallback(email: str, license_key: str, plan_name: str, clarifications_limit: int):
+def _print_email_fallback(email: str, license_key: str, plan_name: str, gobot_limit: int):
     """Fallback: print email to console when Mailgun is not available"""
     print(f"""
     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -484,7 +473,7 @@ def _print_email_fallback(email: str, license_key: str, plan_name: str, clarific
     
     License Key: {license_key}
     Plan: {plan_name}
-    Limit: {clarifications_limit} clarifications/month
+    Limit: {gobot_limit} clarifications/month
     
     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     """)
@@ -769,18 +758,18 @@ async def clarify_ticket(ticket: TicketInput):
                 # Increment usage counter
                 cur.execute("""
                     UPDATE license_keys
-                    SET clarifications_used = clarifications_used + 1,
+                    SET gobot_used = gobot_used + 1,
                         updated_at = NOW()
                     WHERE key_code = %s
                     AND is_active = true
-                    RETURNING clarifications_used, clarifications_limit
+                    RETURNING gobot_used, gobot_limit
                 """, (license_key,))
                 
                 result = cur.fetchone()
                 conn.commit()
                 
                 if result:
-                    print(f"📊 Usage: {result['clarifications_used']}/{result['clarifications_limit']} for {license_key}")
+                    print(f"📊 Usage: {result['gobot_used']}/{result['gobot_limit']} for {license_key}")
                 
             except Exception as e:
                 print(f"Error tracking usage: {e}")
@@ -825,7 +814,7 @@ async def generate_code_endpoint(input: CodeGenInput):
                 
                 # Check usage limit before generating
                 cur.execute("""
-                    SELECT clarifications_used, clarifications_limit, plan
+                    SELECT gobot_used, gobot_limit, plan
                     FROM license_keys
                     WHERE key_code = %s
                     AND is_active = true
@@ -834,27 +823,27 @@ async def generate_code_endpoint(input: CodeGenInput):
                 result = cur.fetchone()
                 
                 if result:
-                    if result['clarifications_used'] >= result['clarifications_limit']:
+                    if result['gobot_used'] >= result['gobot_limit']:
                         raise HTTPException(
                             status_code=429,
-                            detail=f"Monthly limit of {result['clarifications_limit']} reached. Please upgrade or wait for reset."
+                            detail=f"Monthly limit of {result['gobot_limit']} reached. Please upgrade or wait for reset."
                         )
                     
                     # Increment usage counter
                     cur.execute("""
                         UPDATE license_keys
-                        SET clarifications_used = clarifications_used + 1,
+                        SET gobot_used = gobot_used + 1,
                             updated_at = NOW()
                         WHERE key_code = %s
                         AND is_active = true
-                        RETURNING clarifications_used, clarifications_limit
+                        RETURNING gobot_used, gobot_limit
                     """, (license_key,))
                     
                     updated = cur.fetchone()
                     conn.commit()
                     
                     if updated:
-                        print(f"📊 Code Gen Usage: {updated['clarifications_used']}/{updated['clarifications_limit']} for {license_key}")
+                        print(f"📊 Code Gen Usage: {updated['gobot_used']}/{updated['gobot_limit']} for {license_key}")
                 
             except HTTPException:
                 raise
@@ -962,14 +951,14 @@ async def stripe_webhook_handler(request: Request):
                 
                 # Generate license key
                 license_key = generate_license_key()
-                clarifications_limit = get_plan_limits(plan_id)
+                gobot_limit = get_plan_limits(plan_id)
                 
                 # Insert license key
                 cur.execute("""
                     INSERT INTO license_keys 
                     (key_code, customer_email, plan, stripe_subscription_id, 
-                     stripe_customer_id, stripe_payment_intent_id, clarifications_limit,
-                     clarifications_used, usage_resets_at, subscription_status)
+                     stripe_customer_id, stripe_payment_intent_id, gobot_limit,
+                     gobot_used, usage_resets_at, subscription_status)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, 0, NOW() + INTERVAL '1 month', 'active')
                     RETURNING id
                 """, (
@@ -979,15 +968,15 @@ async def stripe_webhook_handler(request: Request):
                     subscription_id,
                     customer_id,
                     payment_intent_id,
-                    clarifications_limit
+                    gobot_limit
                 ))
                 
                 conn.commit()
                 print(f"🔑 License key generated: {license_key}")
-                print(f"📊 Limit: {clarifications_limit} clarifications/month")
+                print(f"📊 Limit: {gobot_limit} clarifications/month")
                 
                 # Send email
-                send_license_key_email(customer_email, license_key, plan_id.capitalize(), clarifications_limit)
+                send_license_key_email(customer_email, license_key, plan_id.capitalize(), gobot_limit)
                 print(f"📧 Email sent to {customer_email}")
                 
                 return {"status": "success", "keyCode": license_key}
@@ -997,7 +986,7 @@ async def stripe_webhook_handler(request: Request):
                 print(f"🔄 Renewal payment for subscription: {subscription_id}")
                 cur.execute("""
                     UPDATE license_keys
-                    SET clarifications_used = 0,
+                    SET gobot_used = 0,
                         usage_resets_at = NOW() + INTERVAL '1 month',
                         updated_at = NOW()
                     WHERE stripe_subscription_id = %s
@@ -1117,6 +1106,102 @@ async def stripe_webhook_handler(request: Request):
         conn.close()
 
 
+@app.post("/create-free-key")
+async def create_free_key(input: CreateFreeKeyInput):
+    """
+    Create a free license key for a new user
+    """
+    email = input.email.strip().lower()
+    
+    if not email or '@' not in email:
+        raise HTTPException(status_code=400, detail="Valid email required")
+    
+    conn = get_db_connection()
+    if not conn:
+        raise HTTPException(status_code=500, detail="Database unavailable")
+    
+    try:
+        cur = conn.cursor()
+        
+        # Check if email already has a free key
+        cur.execute("""
+            SELECT key_code, is_active, plan
+            FROM license_keys
+            WHERE customer_email = %s AND plan = 'free'
+        """, (email,))
+        
+        existing = cur.fetchone()
+        
+        if existing:
+            if existing['is_active']:
+                # Return existing key
+                return {
+                    "keyCode": existing['key_code'],
+                    "email": email,
+                    "plan": "free",
+                    "isExisting": True,
+                    "message": "You already have a free license key. Check your email or use the key below."
+                }
+            else:
+                # Reactivate existing key
+                cur.execute("""
+                    UPDATE license_keys
+                    SET is_active = true,
+                        gobot_used = 0,
+                        usage_resets_at = NOW() + INTERVAL '1 month',
+                        updated_at = NOW()
+                    WHERE key_code = %s
+                    RETURNING key_code
+                """, (existing['key_code'],))
+                conn.commit()
+                
+                # Send email with existing key
+                send_license_key_email(email, existing['key_code'], "Free", 5)
+                
+                return {
+                    "keyCode": existing['key_code'],
+                    "email": email,
+                    "plan": "free",
+                    "isExisting": True,
+                    "message": "Your free license key has been reactivated."
+                }
+        
+        # Generate new license key
+        license_key = generate_license_key()
+        gobot_limit = get_plan_limits('free')
+        
+        # Insert new license key
+        cur.execute("""
+            INSERT INTO license_keys 
+            (key_code, customer_email, plan, gobot_limit, gobot_used, 
+             usage_resets_at, subscription_status, is_active)
+            VALUES (%s, %s, 'free', %s, 0, NOW() + INTERVAL '1 month', 'active', true)
+            RETURNING id
+        """, (license_key, email, gobot_limit))
+        
+        conn.commit()
+        
+        print(f"🆓 Free license key created: {license_key} for {email}")
+        
+        # Send email
+        send_license_key_email(email, license_key, "Free", gobot_limit)
+        
+        return {
+            "keyCode": license_key,
+            "email": email,
+            "plan": "free",
+            "gobotLimit": gobot_limit,
+            "isExisting": False,
+            "message": "Your free license key has been created!"
+        }
+        
+    except Exception as e:
+        conn.rollback()
+        print(f"Error creating free key: {e}")
+        raise HTTPException(status_code=500, detail="Failed to create license key")
+    finally:
+        conn.close()
+
 
 @app.get("/license-key/payment-intent/{payment_intent_id}")
 async def get_license_key_by_payment_intent(payment_intent_id: str):
@@ -1136,7 +1221,7 @@ async def get_license_key_by_payment_intent(payment_intent_id: str):
                 key_code,
                 customer_email,
                 plan,
-                clarifications_limit,
+                gobot_limit,
                 created_at,
                 usage_resets_at
             FROM license_keys
@@ -1155,7 +1240,7 @@ async def get_license_key_by_payment_intent(payment_intent_id: str):
             "keyCode": result['key_code'],
             "email": result['customer_email'],
             "plan": result['plan'],
-            "clarificationsLimit": result['clarifications_limit'],
+            "gobotLimit": result['gobot_limit'],
             "createdAt": result['created_at'].isoformat() if result['created_at'] else None,
             "usageResetsAt": result['usage_resets_at'].isoformat() if result['usage_resets_at'] else None
         }
@@ -1191,8 +1276,8 @@ async def validate_license_key(request: Request, key_input: AccessKeyInput):
                 plan,
                 is_active,
                 subscription_status,
-                clarifications_limit,
-                clarifications_used,
+                gobot_limit,
+                gobot_used,
                 usage_resets_at,
                 activated_at
             FROM license_keys
@@ -1222,11 +1307,11 @@ async def validate_license_key(request: Request, key_input: AccessKeyInput):
             )
         
         # Check if usage limit exceeded
-        if key_data['clarifications_used'] >= key_data['clarifications_limit']:
+        if key_data['gobot_used'] >= key_data['gobot_limit']:
             resets_at = key_data['usage_resets_at'].strftime('%B %d') if key_data['usage_resets_at'] else 'soon'
             return AccessKeyResponse(
                 valid=False,
-                message=f"Monthly limit of {key_data['clarifications_limit']} clarifications reached. Resets on {resets_at}."
+                message=f"Monthly limit of {key_data['gobot_limit']} clarifications reached. Resets on {resets_at}."
             )
         
         # Mark as activated if first use
@@ -1240,14 +1325,14 @@ async def validate_license_key(request: Request, key_input: AccessKeyInput):
             print(f"🎉 License key activated: {key_code, install}")
         
         # Calculate remaining
-        remaining = key_data['clarifications_limit'] - key_data['clarifications_used']
+        remaining = key_data['gobot_limit'] - key_data['gobot_used']
         
         return AccessKeyResponse(
             valid=True,
             install=install,
             plan=key_data['plan'],
             message="License key validated successfully!",
-            clarificationsRemaining=remaining
+            gobotsRemaining=remaining
         )
         
     except Exception as e:
@@ -1323,8 +1408,8 @@ async def get_key_usage(key_code: str):
                 key_code,
                 plan,
                 customer_email,
-                clarifications_limit,
-                clarifications_used,
+                gobot_limit,
+                gobot_used,
                 usage_resets_at,
                 subscription_status,
                 is_active,
@@ -1342,9 +1427,9 @@ async def get_key_usage(key_code: str):
             "keyCode": key_code,
             "plan": key['plan'],
             "email": key['customer_email'],
-            "clarificationsUsed": key['clarifications_used'],
-            "clarificationsLimit": key['clarifications_limit'],
-            "clarificationsRemaining": max(0, key['clarifications_limit'] - key['clarifications_used']),
+            "clarificationsUsed": key['gobot_used'],
+            "gobotLimit": key['gobot_limit'],
+            "clarificationsRemaining": max(0, key['gobot_limit'] - key['gobot_used']),
             "usageResets": key['usage_resets_at'].isoformat() if key['usage_resets_at'] else None,
             "subscriptionStatus": key['subscription_status'],
             "isActive": key['is_active'],
@@ -1369,7 +1454,7 @@ async def get_key_by_install(install: InstallData):
         cur = conn.cursor()
         
         cur.execute("""
-            SELECT key_code, plan, created_at, expires_at, is_active
+            SELECT key_code, plan, created_at, expires_at, is_active, gobot_limit, gobot_used, usage_resets_at
             FROM license_keys
             WHERE install = %s
         """, (install.install,))
@@ -1384,7 +1469,10 @@ async def get_key_by_install(install: InstallData):
             "plan": result['plan'],
             "createdAt": result['created_at'].isoformat() if result['created_at'] else None,
             "expiresAt": result['expires_at'].isoformat() if result['expires_at'] else None,
-            "isActive": result['is_active']
+            "isActive": result['is_active'],
+            "gobot_limit": result['gobot_limit'],
+            "gobot_used": result['gobot_used'],
+            "usage_resets_at": result['usage_resets_at']
         }
         
     finally:
@@ -1561,11 +1649,4 @@ async def general_exception_handler(request, exc):
         content={"error": "Internal server error"}
     )
 
-# ============================================================================
-# Development
-# ============================================================================
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 8000)))
-    
+ 
