@@ -16,6 +16,7 @@ from pinecone import Pinecone
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import redis
+import requests
 import stripe
 from contextlib import asynccontextmanager
 
@@ -42,6 +43,9 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
 STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY")
 STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
+MAILGUN_API_KEY = os.getenv("MAILGUN_API_KEY")
+MAILGUN_DOMAIN = os.getenv("MAILGUN_DOMAIN")
+MAILGUN_FROM_EMAIL = os.getenv("MAILGUN_FROM_EMAIL", "GoBot <noreply@gobot.dev>")
  
 # Feature flags
 ENABLE_RAG = os.getenv("ENABLE_RAG", "false").lower() == "true"
@@ -328,47 +332,159 @@ def generate_license_key() -> str:
     
     return f"JIRA-{'-'.join(parts)}"
 
-def send_license_key_email(email: str, license_key: str, plan_name: str, clarifications_limit: int):
+def send_license_key_email(email: str, license_key: str, plan_name: str, clarifications_limit: int) -> bool:
     """
-    Send license key via email
+    Send license key via Mailgun email
+    Returns True if sent successfully, False otherwise
     """
+    
+    # Check if Mailgun is configured
+    if not MAILGUN_API_KEY or not MAILGUN_DOMAIN:
+        print("⚠️ Mailgun not configured. Set MAILGUN_API_KEY and MAILGUN_DOMAIN env vars.")
+        _print_email_fallback(email, license_key, plan_name, clarifications_limit)
+        return False
+    
+    subject = f"Your GoBot {plan_name} License Key 🎉"
+    
+    # Plain text version
+    text_body = f"""
+Hi there!
+
+Welcome to GoBot {plan_name}!
+
+Your License Key: {license_key}
+
+📊 Your Plan:
+- {plan_name} Subscription
+- {clarifications_limit} clarifications per month
+- Renews automatically
+- Cancel anytime
+
+🚀 How to Activate (3 easy steps):
+
+1. Install GoBot in your Jira workspace
+2. Open any Jira ticket
+3. Enter your license key in the GoBot panel
+
+That's it! Start clarifying vague tickets into crystal-clear requirements.
+
+💡 Pro Tip: Your usage resets on the 1st of each month.
+
+Need help? Just reply to this email.
+
+Happy clarifying! ✨
+The GoBot Team
+"""
+
+    # HTML version
+    html_body = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+    
+    <div style="text-align: center; margin-bottom: 30px;">
+        <h1 style="color: #10b981; margin: 0;">🤖 GoBot</h1>
+    </div>
+    
+    <h2 style="color: #1e293b;">Welcome to GoBot {plan_name}!</h2>
+    
+    <p>Hi there!</p>
+    
+    <p>Thank you for subscribing! Here's your license key:</p>
+    
+    <div style="background: linear-gradient(135deg, #10b981 0%, #0ea5e9 100%); border-radius: 12px; padding: 24px; text-align: center; margin: 24px 0;">
+        <p style="color: rgba(255,255,255,0.9); margin: 0 0 8px 0; font-size: 14px;">Your License Key</p>
+        <code style="background: rgba(0,0,0,0.2); color: white; font-size: 20px; font-weight: bold; padding: 12px 20px; border-radius: 8px; display: inline-block; letter-spacing: 1px;">
+            {license_key}
+        </code>
+    </div>
+    
+    <div style="background: #f8fafc; border-radius: 8px; padding: 20px; margin: 24px 0;">
+        <h3 style="margin: 0 0 12px 0; color: #1e293b;">📊 Your Plan</h3>
+        <ul style="margin: 0; padding-left: 20px; color: #64748b;">
+            <li><strong>{plan_name}</strong> Subscription</li>
+            <li><strong>{clarifications_limit}</strong> clarifications per month</li>
+            <li>Renews automatically</li>
+            <li>Cancel anytime</li>
+        </ul>
+    </div>
+    
+    <div style="background: #f8fafc; border-radius: 8px; padding: 20px; margin: 24px 0;">
+        <h3 style="margin: 0 0 12px 0; color: #1e293b;">🚀 How to Activate</h3>
+        <ol style="margin: 0; padding-left: 20px; color: #64748b;">
+            <li>Install GoBot in your Jira workspace</li>
+            <li>Open any Jira ticket</li>
+            <li>Enter your license key in the GoBot panel</li>
+        </ol>
+    </div>
+    
+    <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 24px 0;">
+        <p style="margin: 0; color: #92400e;">
+            💡 <strong>Pro Tip:</strong> Your usage resets on the 1st of each month.
+        </p>
+    </div>
+    
+    <p>Need help? Just reply to this email.</p>
+    
+    <p>Happy clarifying! ✨<br>
+    <strong>The GoBot Team</strong></p>
+    
+    <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;">
+    
+    <p style="font-size: 12px; color: #94a3b8; text-align: center;">
+        © 2025 GoBot. All rights reserved.<br>
+        <a href="https://gobot.dev" style="color: #10b981;">gobot.dev</a>
+    </p>
+    
+</body>
+</html>
+"""
+
+    try:
+        response = requests.post(
+            f"https://api.mailgun.net/v3/{MAILGUN_DOMAIN}/messages",
+            auth=("api", MAILGUN_API_KEY),
+            data={
+                "from": MAILGUN_FROM_EMAIL,
+                "to": email,
+                "subject": subject,
+                "text": text_body,
+                "html": html_body
+            },
+            timeout=10
+        )
+        
+        if response.status_code == 200:
+            print(f"✅ License key email sent to {email}")
+            return True
+        else:
+            print(f"❌ Mailgun error: {response.status_code} - {response.text}")
+            _print_email_fallback(email, license_key, plan_name, clarifications_limit)
+            return False
+            
+    except requests.RequestException as e:
+        print(f"❌ Failed to send email: {e}")
+        _print_email_fallback(email, license_key, plan_name, clarifications_limit)
+        return False
+
+
+def _print_email_fallback(email: str, license_key: str, plan_name: str, clarifications_limit: int):
+    """Fallback: print email to console when Mailgun is not available"""
     print(f"""
     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    📧 SEND EMAIL
+    📧 EMAIL (FALLBACK - NOT SENT)
     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     
     To: {email}
-    Subject: Your Go Bot {plan_name} License Key 🎉
+    Subject: Your GoBot {plan_name} License Key 🎉
     
-    Hi there!
-    
-    Welcome to Go Bot {plan_name}!
-    
-    ╔══════════════════════════════════════╗
-    ║  Your License Key:                   ║
-    ║  {license_key}              ║
-    ╚══════════════════════════════════════╝
-    
-    📊 Your Plan:
-    • {plan_name} Subscription
-    • {clarifications_limit} clarifications per month
-    • Renews automatically
-    • Cancel anytime
-    
-    🚀 How to Activate (3 easy steps):
-    
-    1. Install Go Bot in your Jira workspace
-    2. Open any Jira ticket
-    3. Enter your license key in the panel
-    
-    That's it! Start clarifying vague tickets into crystal-clear requirements.
-    
-    💡 Pro Tip: Your usage resets on the 1st of each month.
-    
-    Need help? Just reply to this email.
-    
-    Happy clarifying! ✨
-    The Go Bot Team
+    License Key: {license_key}
+    Plan: {plan_name}
+    Limit: {clarifications_limit} clarifications/month
     
     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     """)
