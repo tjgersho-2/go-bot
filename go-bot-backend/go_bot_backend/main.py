@@ -45,7 +45,7 @@ STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY")
 STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
 MAILGUN_API_KEY = os.getenv("MAILGUN_API_KEY")
 MAILGUN_DOMAIN = os.getenv("MAILGUN_DOMAIN")
-MAILGUN_FROM_EMAIL = os.getenv("MAILGUN_FROM_EMAIL", "GoBot <noreply@gobot.dev>")
+MAILGUN_FROM_EMAIL = os.getenv("MAILGUN_FROM_EMAIL", "GoBot <gobot@gobot.ai>")
  
 # Feature flags
 ENABLE_RAG = os.getenv("ENABLE_RAG", "false").lower() == "true"
