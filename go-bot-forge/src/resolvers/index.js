@@ -123,9 +123,27 @@ resolver.define('getHealth', async (req) => {
 });
 
 
-/**
- * Health check resolver (for testing)
- */
+resolver.define('getKeyUsage', async ({ payload }) => {
+  try{
+    const { accessKey } = payload;
+    const response = await fetch(`${API_BASE_URL}//usage/${accessKey}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      }
+     }
+    );
+    if (!response.ok) {
+      return response;
+    }
+    const data = await response.json();
+    return data;
+  }catch(e){
+    return e;
+  }
+});
+
+ 
 resolver.define('getKeyByInstall', async ({ payload }) => {
   try{
     const { install } = payload;

@@ -1427,10 +1427,10 @@ async def get_key_usage(key_code: str):
             "keyCode": key_code,
             "plan": key['plan'],
             "email": key['customer_email'],
-            "clarificationsUsed": key['gobot_used'],
+            "gotbotsUsed": key['gobot_used'],
             "gobotLimit": key['gobot_limit'],
-            "clarificationsRemaining": max(0, key['gobot_limit'] - key['gobot_used']),
-            "usageResets": key['usage_resets_at'].isoformat() if key['usage_resets_at'] else None,
+            "gobotsRemaining": max(0, key['gobot_limit'] - key['gobot_used']),
+            "usageResetsAt": key['usage_resets_at'].isoformat() if key['usage_resets_at'] else None,
             "subscriptionStatus": key['subscription_status'],
             "isActive": key['is_active'],
             "activatedAt": key['activated_at'].isoformat() if key['activated_at'] else None

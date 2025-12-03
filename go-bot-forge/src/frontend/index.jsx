@@ -60,6 +60,7 @@ const App = () => {
                     // Clean up storage
                     await invoke('clearJob', { jobId });
                     onComplete(status.result);
+                    await getKeyUsage();
                     return;
                 }
                 
@@ -294,6 +295,23 @@ const App = () => {
           }
       };
       
+      const getKeyUsage = async () =>{
+        try {
+          const result = await invoke('getKeyUsage', { accessKey: accessKey });
+          if (result.isActive) {
+              setPlan(result.plan);
+              setGobotUsed(result.gobot_used);
+              setGobotLimit(result.gobot_limit);
+              setUsageResetsAt(result.usageResetsAt);
+              setAccessKey(result.keyCode);
+          } else {
+              console.log("Problem getting key usage.");
+          }
+        }catch(e){
+          console.error(e);
+        }  
+      }
+
 
     const checkOnAccessKey = async (install) =>{
       try {
