@@ -305,7 +305,7 @@ const App = () => {
             setPlan(result.plan);
             setGobotUsed(result.gobot_used);
             setGobotLimit(result.gobot_limit);
-            setUsageResetsAt(result.usage_resets_at);
+            setUsageResetsAt(result.usageResetsAt);
             setKeyModalOpen(false);
             setAccessKey(result.keyCode);
             setKeyValid(true)
@@ -458,6 +458,7 @@ const App = () => {
         if (clarifiedData) {
             setAnalyzing(true);
             setError(null);
+            setCodeSaved(false);
             
             try {
                 const formattedDescription = formatClarifiedDescription(
