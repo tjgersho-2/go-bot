@@ -24,22 +24,22 @@ export default function PaymentContent() {
   const planDetails = {
     pro: {
       name: 'Pro',
-      price: '$19',
+      price: '$29',
       period: '/month',
-      tickets: 100,
+      tickets: 50,
       description: 'Perfect for individual developers',
       color: 'from-emerald-600 to-cyan-600'
     },
     team: {
       name: 'Team',
-      price: '$79',
+      price: '$99',
       period: '/month',
-      tickets: null,
+      tickets: 200,
       description: 'For growing engineering teams',
       color: 'from-cyan-600 to-teal-600'
     }
   };
-
+  
   const plan = planDetails[planId as keyof typeof planDetails] || planDetails.pro;
 
   useEffect(() => {

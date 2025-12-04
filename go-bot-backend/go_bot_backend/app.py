@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Depends, Request, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 import anthropic
 from pinecone import Pinecone
@@ -111,6 +112,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.mount("/files", StaticFiles(directory="static"), "static")
+
 # ============================================================================
 # Models
 # ============================================================================
@@ -194,20 +197,6 @@ def init_database():
     
     try:
         cur = conn.cursor()
-
-        # Organizations table
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS organizations (
-                id SERIAL PRIMARY KEY,
-                install VARCHAR(255) UNIQUE NOT NULL,
-                plan VARCHAR(50) NOT NULL DEFAULT 'free',
-                gobot_limit INTEGER NOT NULL DEFAULT 5,
-                gobot_used INTEGER DEFAULT 0,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
- 
  
         """Add these table creations to your init_database() function"""
         
@@ -243,7 +232,6 @@ def init_database():
         """)
         
         # Create indexes
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_install ON organizations(install)")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_license_key_code ON license_keys(key_code)")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_license_email ON license_keys(customer_email)")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_license_subscription ON license_keys(stripe_subscription_id)")

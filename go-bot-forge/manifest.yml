@@ -6,7 +6,7 @@ modules:
         function: worker-resolver
       render: native
       title: GoBot
-      icon: https://developer.atlassian.com/platform/forge/images/icons/issue-panel-icon.svg
+      icon: https://go-bot-production-b18c.up.railway.app/files/goboticon.svg
   consumer:
     - key: async-processor
       queue: gobot-queue

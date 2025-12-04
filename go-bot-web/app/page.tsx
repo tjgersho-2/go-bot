@@ -6,6 +6,8 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ArrowRight, Sparkles, Zap, Clock, CheckCircle2, Users, Star, Code, Target, TrendingUp, Shield, Rocket, FileCode, GitBranch, Play, Terminal, Layers, Bot } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
+import { GoBotIcon } from '@/components/icons/GoBotIcon';
+
 
 export default function Home() {
   const [activeDemo, setActiveDemo] = useState<'before' | 'clarified' | 'code'>('before');
@@ -619,40 +621,40 @@ export function SettingsPage() {
             >
               Start free. Ship faster as you grow.
             </motion.p>
-          </div>
-          <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-            {[
-              {
-                name: "Free",
-                price: "$0",
-                period: "/month",
-                features: ["5 tickets/month", "Basic clarification", "Community support"],
-                cta: "Get Started",
-                variant: "outline" as const,
-                highlight: false,
-                onClick: () => window.location.href = '/checkout?plan=free'
-              },
-              {
-                name: "Pro",
-                price: "$19",
-                period: "/month",
-                features: ["100 tickets/month", "Full code generation", "Priority support", "All frameworks"],
-                cta: "Start Pro",
-                variant: "default" as const,
-                highlight: true,
-                onClick: () => window.location.href = '/checkout?plan=pro'
-              },
-              {
-                name: "Team",
-                price: "$79",
-                period: "/month",
-                features: ["Unlimited tickets", "Custom templates", "API access", "Dedicated support"],
-                cta: "Contact Sales",
-                variant: "outline" as const,
-                highlight: false,
-                onClick: () => window.location.href = 'mailto:sales@gobot.dev?subject=Team%20Plan%20Inquiry'
-              }
-            ].map((plan, i) => (
+        </div>
+        <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+          {[
+            {
+              name: "Free",
+              price: "$0",
+              period: "/month",
+              features: ["5 tickets/month", "Full clarification", "Full code generation", "Community support"],
+              cta: "Get Started",
+              variant: "outline" as const,
+              highlight: false,
+              onClick: () => window.location.href = '/checkout?plan=free'
+            },
+            {
+              name: "Pro",
+              price: "$29",
+              period: "/month",
+              features: ["50 tickets/month", "Full clarification", "Full code generation", "Priority support"],
+              cta: "Start Pro",
+              variant: "default" as const,
+              highlight: true,
+              onClick: () => window.location.href = '/checkout?plan=pro'
+            },
+            {
+              name: "Team",
+              price: "$99",
+              period: "/month",
+              features: ["200 tickets/month", "Full clarification", "Full code generation", "Priority support"],
+              cta: "Start Team",
+              variant: "outline" as const,
+              highlight: false,
+              onClick: () => window.location.href = '/checkout?plan=team'
+            }
+          ].map((plan, i) => (
               <motion.div
                 key={i}
                 initial={{ opacity: 0, y: 40 }}
@@ -713,7 +715,10 @@ export function SettingsPage() {
         >
           <div className="absolute inset-0 bg-gradient-to-r from-emerald-600 via-cyan-600 to-teal-600" />
           <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-20" />
-          
+    
+ 
+     
+
           <div className="container mx-auto px-4 text-center relative z-10">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -721,6 +726,10 @@ export function SettingsPage() {
               viewport={{ once: true }}
               transition={{ duration: 0.6 }}
             >
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center">
+                  <GoBotIcon className="text-white" />
+              </div>
+        
               <h2 className="text-5xl md:text-7xl font-bold text-white mb-8">
                 Ready to Ship Faster?
               </h2>

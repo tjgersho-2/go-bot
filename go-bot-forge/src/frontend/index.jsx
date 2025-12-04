@@ -298,6 +298,8 @@ const App = () => {
       const getKeyUsage = async () =>{
         try {
           const result = await invoke('getKeyUsage', { accessKey: accessKey });
+          console.log("Get Key Usage");
+          console.log(result);
           if (result.isActive) {
               setPlan(result.plan);
               setGobotUsed(result.gobot_used);
@@ -318,6 +320,8 @@ const App = () => {
         setValidatingKey(true);
         setError(null);
         const result = await invoke('getKeyByInstall', { install: install });
+        console.log("Check on Access Key");
+        console.log(result);
         if (result.isActive) {
             setInstall(install);
             setPlan(result.plan);
@@ -605,7 +609,7 @@ const App = () => {
 
       return (
         <Box>
-          {applied && !codeSaved ? (
+          {applied && !codeImplementation ? (
             <SectionMessage title="Success" appearance="confirmation">
               <Text> Changes have been applied to the ticket description. Next, have GoBot Code! </Text>
             </SectionMessage>
@@ -673,7 +677,7 @@ const App = () => {
       if (isLoading) {
         return (
           <Box>
-            <Text>⏳ Saving to ticket description...</Text>
+            <Text>⏳ Saving to ticket...</Text>
           </Box>
         );
       }
@@ -763,7 +767,7 @@ const App = () => {
                       appearance="primary"
                     >Apply to Ticket</Button>
                     <Button 
-                      onClick={clarifyTicket}
+                      onClick={()=>setCodeImplementation(null)}
                     >GoBot Again</Button>
                   </ButtonGroup>
                 );

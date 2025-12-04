@@ -58,7 +58,7 @@ export default function SupportPage() {
       title: 'Email Support',
       description: 'Get help from our team',
       action: 'support@gobot.dev',
-      href: 'mailto:support@gobot.dev',
+      href: 'mailto:gobot@gobot.ai',
       color: 'from-emerald-500 to-emerald-600'
     },
     {

@@ -29,8 +29,8 @@ export default function CheckoutPage() {
       description: 'Try GoBot free',
       features: [
         '5 tickets per month',
-        'Basic clarification',
-        'Simple code snippets',
+        'Full clarification',
+        'Full code generation',
         'Community support',
         'Perfect for trying it out'
       ],
@@ -43,65 +43,40 @@ export default function CheckoutPage() {
     {
       id: 'pro',
       name: 'Pro',
-      price: 19,
+      price: 29,
       period: '/month',
-      tickets: 100,
+      tickets: 50,
       description: 'Perfect for individual developers',
       features: [
-        '100 tickets per month',
+        '50 tickets per month',
+        'Full clarification',
         'Full code generation',
-        'All frameworks supported',
-        'Edge cases & test scenarios',
-        'Priority email support',
-        'Export to any format'
+        'Priority email support'
       ],
       cta: 'Get Pro',
       highlight: true,
-      priceId: "price_1SW1moRU6Di3TZwT442hMmUr",
+      priceId: "price_YOUR_NEW_PRO_PRICE_ID",
       popular: true,
       color: 'from-emerald-600 to-cyan-600'
     },
     {
       id: 'team',
       name: 'Team',
-      price: 79,
+      price: 99,
       period: '/month',
-      tickets: null,
+      tickets: 200,
       description: 'For growing engineering teams',
       features: [
-        'Unlimited tickets',
-        'Everything in Pro',
-        'Custom code templates',
-        'Team analytics dashboard',
-        'API access',
-        'Dedicated support channel'
+        '200 tickets per month',
+        'Full clarification',
+        'Full code generation',
+        'Priority email support'
       ],
       cta: 'Get Team',
       highlight: false,
-      priceId: "price_1SW1nYRU6Di3TZwTgaZ6uGvE",
+      priceId: "price_YOUR_NEW_TEAM_PRICE_ID",
       popular: false,
       color: 'from-cyan-600 to-teal-600'
-    },
-    {
-      id: 'enterprise',
-      name: 'Enterprise',
-      price: null,
-      period: '',
-      tickets: null,
-      description: 'Custom solutions for large orgs',
-      features: [
-        'Unlimited everything',
-        'Everything in Team',
-        'SSO & SCIM provisioning',
-        'SOC2, GDPR compliance',
-        'Dedicated account manager',
-        'Custom integrations'
-      ],
-      cta: 'Contact Sales',
-      highlight: false,
-      priceId: null,
-      popular: false,
-      color: 'from-teal-600 to-emerald-600'
     }
   ];
 
@@ -156,12 +131,6 @@ export default function CheckoutPage() {
     // Handle free plan - show email modal
     if (planId === 'free') {
       setShowFreeModal(true);
-      return;
-    }
-    
-    // Handle enterprise
-    if (planId === 'enterprise') {
-      window.location.href = 'mailto:sales@gobot.dev?subject=Enterprise%20Inquiry';
       return;
     }
 
@@ -344,7 +313,7 @@ export default function CheckoutPage() {
         </motion.div>
 
         {/* Pricing Cards */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-7xl mx-auto mb-16">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-5xl mx-auto mb-16">
           {plans.map((plan, i) => (
             <motion.div
               key={plan.id}
@@ -434,60 +403,60 @@ export default function CheckoutPage() {
 
         {/* Comparison Table */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.6 }}
-          className="max-w-4xl mx-auto mb-16"
-        >
-          <h2 className="text-3xl font-bold text-white text-center mb-8">
-            Plan Comparison
-          </h2>
-          
-          <div className="bg-slate-900/50 border border-slate-800 rounded-2xl overflow-hidden">
-            <table className="w-full">
-              <thead className="bg-slate-800/50">
-                <tr>
-                  <th className="text-left p-4 text-slate-300 font-medium">Feature</th>
-                  <th className="text-center p-4 text-slate-300 font-medium">Free</th>
-                  <th className="text-center p-4 text-emerald-400 font-medium">Pro</th>
-                  <th className="text-center p-4 text-cyan-400 font-medium">Team</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800">
-                <tr>
-                  <td className="p-4 text-slate-300">Tickets/month</td>
-                  <td className="p-4 text-center text-slate-400">5</td>
-                  <td className="p-4 text-center text-white font-medium">100</td>
-                  <td className="p-4 text-center text-white font-medium">Unlimited</td>
-                </tr>
-                <tr>
-                  <td className="p-4 text-slate-300">AI Clarification</td>
-                  <td className="p-4 text-center"><CheckCircle2 className="w-5 h-5 text-emerald-400 mx-auto" /></td>
-                  <td className="p-4 text-center"><CheckCircle2 className="w-5 h-5 text-emerald-400 mx-auto" /></td>
-                  <td className="p-4 text-center"><CheckCircle2 className="w-5 h-5 text-emerald-400 mx-auto" /></td>
-                </tr>
-                <tr>
-                  <td className="p-4 text-slate-300">Full Code Generation</td>
-                  <td className="p-4 text-center"><CheckCircle2 className="w-5 h-5 text-emerald-400 mx-auto" /></td>
-                  <td className="p-4 text-center"><CheckCircle2 className="w-5 h-5 text-emerald-400 mx-auto" /></td>
-                  <td className="p-4 text-center"><CheckCircle2 className="w-5 h-5 text-emerald-400 mx-auto" /></td>
-                </tr>
-                <tr>
-                  <td className="p-4 text-slate-300">All Frameworks</td>
-                  <td className="p-4 text-center"><CheckCircle2 className="w-5 h-5 text-emerald-400 mx-auto" /></td>
-                  <td className="p-4 text-center"><CheckCircle2 className="w-5 h-5 text-emerald-400 mx-auto" /></td>
-                  <td className="p-4 text-center"><CheckCircle2 className="w-5 h-5 text-emerald-400 mx-auto" /></td>
-                </tr>
-                <tr>
-                  <td className="p-4 text-slate-300">API Access</td>
-                  <td className="p-4 text-center text-slate-600">—</td>
-                  <td className="p-4 text-center text-slate-600">—</td>
-                  <td className="p-4 text-center"><CheckCircle2 className="w-5 h-5 text-emerald-400 mx-auto" /></td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </motion.div>
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6 }}
+            className="max-w-4xl mx-auto mb-16"
+          >
+            <h2 className="text-3xl font-bold text-white text-center mb-8">
+              Plan Comparison
+            </h2>
+            
+            <div className="bg-slate-900/50 border border-slate-800 rounded-2xl overflow-hidden">
+              <table className="w-full">
+                <thead className="bg-slate-800/50">
+                  <tr>
+                    <th className="text-left p-4 text-slate-300 font-medium">Feature</th>
+                    <th className="text-center p-4 text-slate-300 font-medium">Free</th>
+                    <th className="text-center p-4 text-emerald-400 font-medium">Pro</th>
+                    <th className="text-center p-4 text-cyan-400 font-medium">Team</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800">
+                  <tr>
+                    <td className="p-4 text-slate-300">Tickets/month</td>
+                    <td className="p-4 text-center text-slate-400">5</td>
+                    <td className="p-4 text-center text-white font-medium">50</td>
+                    <td className="p-4 text-center text-white font-medium">200</td>
+                  </tr>
+                  <tr>
+                    <td className="p-4 text-slate-300">AI Clarification</td>
+                    <td className="p-4 text-center"><CheckCircle2 className="w-5 h-5 text-emerald-400 mx-auto" /></td>
+                    <td className="p-4 text-center"><CheckCircle2 className="w-5 h-5 text-emerald-400 mx-auto" /></td>
+                    <td className="p-4 text-center"><CheckCircle2 className="w-5 h-5 text-emerald-400 mx-auto" /></td>
+                  </tr>
+                  <tr>
+                    <td className="p-4 text-slate-300">Full Code Generation</td>
+                    <td className="p-4 text-center"><CheckCircle2 className="w-5 h-5 text-emerald-400 mx-auto" /></td>
+                    <td className="p-4 text-center"><CheckCircle2 className="w-5 h-5 text-emerald-400 mx-auto" /></td>
+                    <td className="p-4 text-center"><CheckCircle2 className="w-5 h-5 text-emerald-400 mx-auto" /></td>
+                  </tr>
+                  <tr>
+                    <td className="p-4 text-slate-300">All Frameworks</td>
+                    <td className="p-4 text-center"><CheckCircle2 className="w-5 h-5 text-emerald-400 mx-auto" /></td>
+                    <td className="p-4 text-center"><CheckCircle2 className="w-5 h-5 text-emerald-400 mx-auto" /></td>
+                    <td className="p-4 text-center"><CheckCircle2 className="w-5 h-5 text-emerald-400 mx-auto" /></td>
+                  </tr>
+                  <tr>
+                    <td className="p-4 text-slate-300">API Access</td>
+                    <td className="p-4 text-center text-slate-600">—</td>
+                    <td className="p-4 text-center text-slate-600">—</td>
+                    <td className="p-4 text-center"><CheckCircle2 className="w-5 h-5 text-emerald-400 mx-auto" /></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </motion.div>
 
         {/* Trust Signals */}
         <motion.div

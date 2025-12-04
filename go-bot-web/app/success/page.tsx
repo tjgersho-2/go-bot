@@ -307,7 +307,7 @@ function SuccessContent() {
             </p>
             <div className="flex justify-center gap-4 text-sm">
               
-              <a  href="mailto:support@gobot.dev"
+              <a  href="mailto:gobot@gobot.ai"
                 className="text-emerald-400 hover:text-emerald-300"
               >
                 Email Support

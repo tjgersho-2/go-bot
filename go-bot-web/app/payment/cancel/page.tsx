@@ -91,7 +91,7 @@ export default function CancelPage() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <a
-                href="mailto:support@gobot.dev"
+                href="mailto:gobot@gobot.ai"
                 className="text-emerald-400 hover:text-emerald-300 flex items-center justify-center gap-2"
               >
                 <MessageCircle className="w-4 h-4" />
