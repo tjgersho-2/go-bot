@@ -55,7 +55,7 @@ export default function CheckoutPage() {
       ],
       cta: 'Get Pro',
       highlight: true,
-      priceId: "price_YOUR_NEW_PRO_PRICE_ID",
+      priceId: "price_1SaiXSQ9BG1TsPtE7AtiHExs",
       popular: true,
       color: 'from-emerald-600 to-cyan-600'
     },
@@ -74,7 +74,7 @@ export default function CheckoutPage() {
       ],
       cta: 'Get Team',
       highlight: false,
-      priceId: "price_YOUR_NEW_TEAM_PRICE_ID",
+      priceId: "price_1SaiYyQ9BG1TsPtEojmAmAkA",
       popular: false,
       color: 'from-cyan-600 to-teal-600'
     }
