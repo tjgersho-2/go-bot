@@ -1460,7 +1460,7 @@ async def get_key_by_install(install: InstallData):
             "isActive": result['is_active'],
             "gobot_limit": result['gobot_limit'],
             "gobot_used": result['gobot_used'],
-            "usageResets": result['usage_resets_at'].isoformat() if result['usage_resets_at'] else None,
+            "usageResetsAt": result['usage_resets_at'].isoformat() if result['usage_resets_at'] else None,
         }
         
     finally:
