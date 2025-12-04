@@ -82,6 +82,16 @@ const App = () => {
         poll();
     };
 
+    const formatDate = (dateString) => {
+      if (!dateString) return '';
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    };
+    
     const checkHealth = async () => {
       try {
           const results = await invoke('getHealth');
@@ -916,7 +926,7 @@ const App = () => {
         </>
       )}
       {!isAnyLoading &&  keyValid  ?
-            <Text><Em>Plan: {plan.toUpperCase()}</Em>, Usage {gobotUsed}/{gobotLimit}, Resets on: {usageResetsAt}</Text>
+            <Text><Em>Plan: {plan.toUpperCase()}</Em>, Usage {gobotUsed}/{gobotLimit}, Resets on: {formatDate(usageResetsAt)}</Text>
       :<></>}
     </Box>
  );

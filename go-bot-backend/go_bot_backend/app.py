@@ -258,8 +258,8 @@ def get_plan_limits(plan_id: str) -> int:
     """Get clarification limit based on plan"""
     limits = {
         'free': 5,
-        'pro': 100,
-        'team': 1000
+        'pro': 50,
+        'team': 200
     }
     return limits.get(plan_id, 5)
 
@@ -364,7 +364,15 @@ The GoBot Team
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
     
     <div style="text-align: center; margin-bottom: 30px;">
-        <h1 style="color: #10b981; margin: 0;">🤖 GoBot</h1>
+        <h1 style="color: #10b981; margin: 0;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 8V4H8"></path>
+                <rect width="16" height="12" x="4" y="8" rx="2"></rect>
+                <path d="M2 14h2"></path>
+                <path d="M20 14h2"></path>
+                <path d="M15 13v2"></path>
+                <path d="M9 13v2"></path>
+          </svg> GoBot</h1>
     </div>
     
     <h2 style="color: #1e293b;">Welcome to GoBot {plan_name}!</h2>
