@@ -1291,7 +1291,7 @@ async def validate_license_key(request: Request, key_input: AccessKeyInput):
             )
         
         # Check if active
-        if not key_data['is_active']:
+        if not key_data['is_active'] and key_data['activated_at']:
             return AccessKeyResponse(
                 valid=False,
                 message="This license key has been deactivated. Please contact support."
