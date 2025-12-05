@@ -1340,6 +1340,7 @@ async def validate_license_key(request: Request, key_input: AccessKeyInput):
                 UPDATE license_keys 
                 SET activated_at = NOW(), 
                     updated_at = NOW(), 
+                    is_active=true,
                     install = %s
                 WHERE key_code = %s
             """, (install, key_code))
