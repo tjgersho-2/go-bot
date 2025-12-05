@@ -307,8 +307,8 @@ const App = () => {
           const result = await invoke('getKeyUsage', { accessKey: accessKey });
           if (result.isActive) {
               setPlan(result.plan);
-              setGobotUsed(result.gobot_used);
-              setGobotLimit(result.gobot_limit);
+              setGobotUsed(result.gobotUsed);
+              setGobotLimit(result.gobotLimit);
               setUsageResetsAt(result.usageResetsAt);
               setAccessKey(result.keyCode);
           } else {
@@ -328,8 +328,8 @@ const App = () => {
         if (result.isActive) {
             setInstall(install);
             setPlan(result.plan);
-            setGobotUsed(result.gobot_used);
-            setGobotLimit(result.gobot_limit);
+            setGobotUsed(result.gobotUsed);
+            setGobotLimit(result.gobotLimit);
             setUsageResetsAt(result.usageResetsAt);
             setKeyModalOpen(false);
             setAccessKey(result.keyCode);

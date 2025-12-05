@@ -1188,6 +1188,7 @@ async def create_free_key(input: CreateFreeKeyInput):
             "email": email,
             "plan": "free",
             "gobotLimit": gobot_limit,
+            "gobotUsed":  0,
             "isExisting": False,
             "message": "Your free license key has been created!"
         }
@@ -1219,6 +1220,7 @@ async def get_license_key_by_payment_intent(payment_intent_id: str):
                 customer_email,
                 plan,
                 gobot_limit,
+                gobot_used,
                 created_at,
                 usage_resets_at
             FROM license_keys
@@ -1238,6 +1240,7 @@ async def get_license_key_by_payment_intent(payment_intent_id: str):
             "email": result['customer_email'],
             "plan": result['plan'],
             "gobotLimit": result['gobot_limit'],
+            "gobotUsed": result['gobot_used'],
             "createdAt": result['created_at'].isoformat() if result['created_at'] else None,
             "usageResetsAt": result['usage_resets_at'].isoformat() if result['usage_resets_at'] else None
         }
@@ -1452,7 +1455,7 @@ async def get_key_usage(key_code: str):
             "keyCode": key_code,
             "plan": key['plan'],
             "email": key['customer_email'],
-            "gotbotsUsed": key['gobot_used'],
+            "gobotUsed": key['gobot_used'],
             "gobotLimit": key['gobot_limit'],
             "gobotsRemaining": max(0, key['gobot_limit'] - key['gobot_used']),
             "usageResetsAt": key['usage_resets_at'].isoformat() if key['usage_resets_at'] else None,
