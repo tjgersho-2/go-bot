@@ -164,6 +164,8 @@ class AccessKeyInput(BaseModel):
 class AccessKeyResponse(BaseModel):
     valid: bool
     install: Optional[str] = None
+    gobotLimit: Optional[str] = None
+    gobotUsed: Optional[str] = None
     plan: Optional[str] = None
     message: Optional[str] = None
     gobotsRemaining: Optional[int] = None
@@ -1358,6 +1360,8 @@ async def validate_license_key(request: Request, key_input: AccessKeyInput):
             valid=True,
             install=install,
             plan=key_data['plan'],
+            gobotUsed=key_data['gobot_used'],
+            gobotLimit=key_data['gobot_limit'],
             message="License key validated successfully!",
             clarificationsRemaining=remaining
         )

@@ -356,6 +356,8 @@ const App = () => {
             if (result.valid) {
                 setInstall(result.install);
                 setPlan(result.plan);
+                setGobotLimit(result.gobotLimit);
+                setGobotUsed(result.gobotUsed);
                 setKeyModalOpen(false);
                 setError(null);
                 setKeyValid(true)
@@ -380,7 +382,10 @@ const App = () => {
             setError('Please enter an access key');
             return;
         }
-        await validateAccessKey(install, accessKey.trim().toUpperCase());
+        const validKey = await validateAccessKey(install, accessKey.trim().toUpperCase());
+        if (validKey) {
+          await getKeyUsage(accessKey.trim().toUpperCase())
+        }
     };
 
     const enterNewKey = async () => {
