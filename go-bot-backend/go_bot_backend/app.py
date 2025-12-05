@@ -1323,7 +1323,8 @@ async def validate_license_key(request: Request, key_input: AccessKeyInput):
         cur.execute("""
             UPDATE license_keys
             SET is_active = false,
-                updated_at = NOW()
+                updated_at = NOW(),
+                activated_at = NULL
             WHERE install = %s 
             AND key_code != %s
             AND activated_at IS NOT NULL
