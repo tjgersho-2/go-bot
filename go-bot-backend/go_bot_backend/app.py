@@ -164,8 +164,8 @@ class AccessKeyInput(BaseModel):
 class AccessKeyResponse(BaseModel):
     valid: bool
     install: Optional[str] = None
-    gobotLimit: Optional[str] = None
-    gobotUsed: Optional[str] = None
+    gobotLimit: Optional[int] = None
+    gobotUsed: Optional[int] = None
     plan: Optional[str] = None
     message: Optional[str] = None
     gobotsRemaining: Optional[int] = None
