@@ -207,7 +207,7 @@ def init_database():
                 key_code VARCHAR(255) UNIQUE NOT NULL,
                 customer_email VARCHAR(255) NOT NULL,
                 plan VARCHAR(50) NOT NULL,
-                install VARCHAR(255) UNIQUE,
+                install VARCHAR(255),
                 
                 -- Subscription fields
                 stripe_subscription_id VARCHAR(255),
@@ -1252,7 +1252,6 @@ async def validate_license_key(request: Request, key_input: AccessKeyInput):
     """
     Validate a license key and check usage limits
     """
-
     key_code = key_input.accessKey.strip().upper()
     install = key_input.install
     
@@ -1266,6 +1265,7 @@ async def validate_license_key(request: Request, key_input: AccessKeyInput):
     try:
         cur = conn.cursor()
         
+        # Get the key being validated
         cur.execute("""
             SELECT 
                 key_code,
@@ -1276,7 +1276,8 @@ async def validate_license_key(request: Request, key_input: AccessKeyInput):
                 gobot_limit,
                 gobot_used,
                 usage_resets_at,
-                activated_at
+                activated_at,
+                install
             FROM license_keys
             WHERE key_code = %s
         """, (key_code,))
@@ -1303,23 +1304,47 @@ async def validate_license_key(request: Request, key_input: AccessKeyInput):
                 message=f"Subscription is {key_data['subscription_status']}. Please update your payment method."
             )
         
+        # Check if this key is already activated on a different install
+        if key_data['activated_at'] and key_data['install'] and key_data['install'] != install:
+            return AccessKeyResponse(
+                valid=False,
+                message="This license key is already activated on another workspace."
+            )
+        
         # Check if usage limit exceeded
         if key_data['gobot_used'] >= key_data['gobot_limit']:
             resets_at = key_data['usage_resets_at'].strftime('%B %d') if key_data['usage_resets_at'] else 'soon'
             return AccessKeyResponse(
                 valid=False,
-                message=f"Monthly limit of {key_data['gobot_limit']} clarifications reached. Resets on {resets_at}."
+                message=f"Monthly limit of {key_data['gobot_limit']} reached. Resets on {resets_at}."
             )
+        
+        # Deactivate any OLD keys for this install (user is switching to new key)
+        cur.execute("""
+            UPDATE license_keys
+            SET is_active = false,
+                updated_at = NOW()
+            WHERE install = %s 
+            AND key_code != %s
+            AND activated_at IS NOT NULL
+        """, (install, key_code))
+        
+        deactivated_count = cur.rowcount
+        if deactivated_count > 0:
+            print(f"🔒 Deactivated {deactivated_count} old key(s) for install {install}")
         
         # Mark as activated if first use
         if not key_data['activated_at']:
             cur.execute("""
                 UPDATE license_keys 
-                SET activated_at = NOW(), updated_at = NOW(), install = %s
+                SET activated_at = NOW(), 
+                    updated_at = NOW(), 
+                    install = %s
                 WHERE key_code = %s
-            """, (install, key_code,))
-            conn.commit()
-            print(f"🎉 License key activated: {key_code, install}")
+            """, (install, key_code))
+            print(f"🎉 License key activated: {key_code} for {install}")
+        
+        conn.commit()
         
         # Calculate remaining
         remaining = key_data['gobot_limit'] - key_data['gobot_used']
@@ -1329,11 +1354,12 @@ async def validate_license_key(request: Request, key_input: AccessKeyInput):
             install=install,
             plan=key_data['plan'],
             message="License key validated successfully!",
-            gobotsRemaining=remaining
+            clarificationsRemaining=remaining
         )
         
     except Exception as e:
         print(f"Error validating key: {e}")
+        conn.rollback()
         return AccessKeyResponse(
             valid=False,
             message="Error validating key. Please try again."
@@ -1440,8 +1466,7 @@ async def get_key_usage(key_code: str):
 @app.post("/find-key-by-install")
 async def get_key_by_install(install: InstallData):
     """
-    Get license key by Stripe payment intent ID
-    Used by success page to display key
+    Get active license key by install ID
     """
     conn = get_db_connection()
     if not conn:
@@ -1451,15 +1476,29 @@ async def get_key_by_install(install: InstallData):
         cur = conn.cursor()
         
         cur.execute("""
-            SELECT key_code, plan, created_at, expires_at, is_active, gobot_limit, gobot_used, usage_resets_at
+            SELECT 
+                key_code, 
+                plan, 
+                created_at, 
+                expires_at, 
+                is_active, 
+                gobot_limit, 
+                gobot_used, 
+                usage_resets_at
             FROM license_keys
-            WHERE install = %s
+            WHERE install = %s 
+            AND is_active = true
+            ORDER BY created_at DESC
+            LIMIT 1
         """, (install.install,))
         
         result = cur.fetchone()
         
         if not result:
-            raise HTTPException(status_code=404, detail="License key not found")
+            return {
+                "isActive": False,
+                "message": "No active license key found for this install."
+            }
         
         return {
             "keyCode": result['key_code'],
@@ -1467,11 +1506,14 @@ async def get_key_by_install(install: InstallData):
             "createdAt": result['created_at'].isoformat() if result['created_at'] else None,
             "expiresAt": result['expires_at'].isoformat() if result['expires_at'] else None,
             "isActive": result['is_active'],
-            "gobot_limit": result['gobot_limit'],
-            "gobot_used": result['gobot_used'],
-            "usageResetsAt": result['usage_resets_at'].isoformat() if result['usage_resets_at'] else None,
+            "gobotLimit": result['gobot_limit'],
+            "gobotUsed": result['gobot_used'],
+            "usageResetsAt": result['usage_resets_at'].isoformat() if result['usage_resets_at'] else None
         }
         
+    except Exception as e:
+        print(f"Error finding key by install: {e}")
+        raise HTTPException(status_code=500, detail="Failed to find license key")
     finally:
         conn.close()
 

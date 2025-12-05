@@ -55,9 +55,7 @@ const App = () => {
         const poll = async () => {
             try {
                 const status = await invoke('getJobStatus', { jobId });
-                
-                console.log(`📊 Job ${jobId} status:`, status.status);
-                
+
                 if (status.status === 'completed') {
                     // Clean up storage
                     await invoke('clearJob', { jobId });
@@ -97,8 +95,6 @@ const App = () => {
     const checkHealth = async () => {
       try {
           const results = await invoke('getHealth');
-          console.log('results');
-          console.log(results);
       } catch (err) {
           console.error('Results error', err);
       }
@@ -294,8 +290,7 @@ const App = () => {
               }
               
               const result = await response.json();
-              console.log('✅ Attachment uploaded:', result);
-              
+ 
               return { 
                   success: true, 
                   filename: filename,
@@ -310,8 +305,6 @@ const App = () => {
       const getKeyUsage = async () =>{
         try {
           const result = await invoke('getKeyUsage', { accessKey: accessKey });
-          console.log("Get Key Usage");
-          console.log(result);
           if (result.isActive) {
               setPlan(result.plan);
               setGobotUsed(result.gobot_used);
@@ -319,7 +312,7 @@ const App = () => {
               setUsageResetsAt(result.usageResetsAt);
               setAccessKey(result.keyCode);
           } else {
-              console.log("Problem getting key usage.");
+              console.error("Problem getting key usage.");
           }
         }catch(e){
           console.error(e);
@@ -332,8 +325,6 @@ const App = () => {
         setValidatingKey(true);
         setError(null);
         const result = await invoke('getKeyByInstall', { install: install });
-        console.log("Check on Access Key");
-        console.log(result);
         if (result.isActive) {
             setInstall(install);
             setPlan(result.plan);
@@ -346,7 +337,7 @@ const App = () => {
             return {install: install, accessKey: result.keyCode};
         } else {
             setKeyValid(false)
-            console.log("No key found by install.");
+            console.error("No key found by install.");
             return null;
         }
       }catch(e){
@@ -359,11 +350,7 @@ const App = () => {
 
     const validateAccessKey = async (install, key) => {
         setValidatingKey(true);
-        setError(null);
-
-        console.log("Validating Access Key");
-        console.log(key, install);
-        
+        setError(null);        
         try {
             const result = await invoke('validateAccessKey', { accessKey: key, install: install });
             if (result.valid) {
@@ -394,6 +381,12 @@ const App = () => {
             return;
         }
         await validateAccessKey(install, accessKey.trim().toUpperCase());
+    };
+
+    const enterNewKey = async () => {
+      await resetAnalysis();
+      setAccessKey(null);
+      setKeyModalOpen(true);
     };
 
     const skipStepOne = async () => {
@@ -429,9 +422,6 @@ const App = () => {
                     customPrompt: clarifyCustomPrompt || "",
                     accessKey: accessKey
                 });
-                
-                console.log(`🚀 Started clarify job: ${jobId}`);
-                
                 // Poll for completion
                 pollJobStatus(
                     jobId,
@@ -526,14 +516,10 @@ const App = () => {
                     accessKey: accessKey
                 });
                 
-                console.log(`🚀 Started code gen job: ${jobId}`);
-                
                 // Poll for completion
                 pollJobStatus(
                     jobId,
                     (result) => {
-                        console.log("Result on Code: ");
-                        console.log(result);
                         // Success
                         setCodeImplementation(result);
                         setAnalyzing(false);
@@ -834,6 +820,9 @@ const App = () => {
                         <Tooltip content="Skip clarification step, and use your jira title and description to Gen Code.">
                           <Button onClick={skipStepOne}>Skip &#8594;</Button>
                         </Tooltip>
+                        <Tooltip content="Skip clarification step, and use your jira title and description to Gen Code.">
+                          <Button onClick={enterNewKey}>Enter New Key</Button>
+                        </Tooltip>
                       </Inline>
                     </Inline>
                   </Box>
@@ -865,9 +854,6 @@ const App = () => {
     if(install != context?.accountId){   
       setInstall(context?.accountId);  
     } 
-    console.log("Account");
-    console.log(context?.accountId);
-    console.log(issueId);
     
     // Initialize app
     const initializeApp = async () => {
