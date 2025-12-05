@@ -9,9 +9,11 @@ import ForgeReconciler, {
     Box,
     ButtonGroup,
     SectionMessage,
+    ProgressBar,
     Form,
     Inline,
     Label,
+    Stack,
     Strong,
     Link,
     TextArea,
@@ -758,8 +760,7 @@ const App = () => {
                   <Text>
                     <Em>Step 2. Transform scope to an initial AI implementation.</Em>
                   </Text>
-                  <Inline  alignInline="start" grow="fill">
-                  {showCustomPromptForm ? (
+                  {showCustomPromptForm && (
                     <Box>
                         <Label labelFor="codeGenCustomPrompt">Custom Prompt:</Label>
                         <Inline grow="fill">
@@ -773,7 +774,9 @@ const App = () => {
                         <Button onClick={() => {setShowCustomPromptForm(false); setCodeGenCustomPrompt(null);}}>Clear</Button>
                       </Inline>
                     </Box>
-                  ) : (
+                  )}
+                  <Inline  alignInline="start" grow="fill">
+                  {!showCustomPromptForm && (
                     <Button onClick={() => setShowCustomPromptForm(true)}>Custom Prompt</Button>
                   )}
                   <Button onClick={goBotCode} appearance="primary">GoBot Code!</Button>
@@ -802,8 +805,7 @@ const App = () => {
                     <Text>
                       <Em>Step 1. Transform tickets into crystal-clear scope.</Em>
                     </Text>
-                    <Inline  alignInline="start" grow="fill">
-                    {showCustomPromptForm ? (
+                    {showCustomPromptForm && (
                       <Box>
                         <Label labelFor="clarifyCustomPrompt">Custom Prompt:</Label>
                         <Inline grow="fill">
@@ -817,7 +819,9 @@ const App = () => {
                           <Button onClick={() => {setShowCustomPromptForm(false); setClarifyCustomPrompt(null);}}>Clear</Button>
                         </Inline>
                       </Box>
-                    ) : (
+                    )}
+                    <Inline  alignInline="start" grow="fill">
+                    {!showCustomPromptForm && (
                       <Button onClick={() => setShowCustomPromptForm(true)}>Custom Prompt</Button>
                     )}
                     <Button onClick={clarifyTicket} appearance="primary">GoBot</Button>
@@ -950,7 +954,17 @@ const App = () => {
         </>
       )}
       {!isAnyLoading &&  keyValid  ?
-            <Text><Em>Plan: {plan.toUpperCase()}</Em>, Usage {gobotUsed}/{gobotLimit}, Resets on: {formatDate(usageResetsAt)}</Text>
+            <Inline space="space.050" spread='space-between'>
+              <Inline grow="fill">
+                <Text><Em>Plan: {plan.toUpperCase()}</Em></Text>
+              </Inline>
+              <Stack grow="fill">
+                <Text>Usage: </Text><ProgressBar value={gobotUsed/gobotLimit} /> 
+              </Stack>
+              <Inline grow="fill" alignInline="end">
+                <Text>Resets on: {formatDate(usageResetsAt)}</Text>
+              </Inline>
+            </Inline>
       :<></>}
     </Box>
  );
