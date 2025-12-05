@@ -447,7 +447,7 @@ export default function DocsPage() {
                     <Step number={3} title="Enter Your License Key">
                       <p>Enter your key in the format shown below and click "Validate Key".</p>
                       <CodeBlock 
-                        code="JIRA-XXXX-XXXX-XXXX"
+                        code="GOBOT-XXXX-XXXX-XXXX"
                         language="text"
                         index={0}
                       />
@@ -770,7 +770,7 @@ export default function DocsPage() {
                   <div className="space-y-6">
                     <div>
                       <h4 className="font-medium text-white mb-2">"Invalid access key" error</h4>
-                      <p className="text-slate-300 text-sm mb-2">Make sure you're entering the key in the correct format: <code className="px-2 py-1 bg-slate-800 rounded text-emerald-400">JIRA-XXXX-XXXX-XXXX</code></p>
+                      <p className="text-slate-300 text-sm mb-2">Make sure you're entering the key in the correct format: <code className="px-2 py-1 bg-slate-800 rounded text-emerald-400">GOBOT-XXXX-XXXX-XXXX</code></p>
                       <p className="text-slate-300 text-sm">Keys are case-insensitive but must match your purchase email.</p>
                     </div>
 

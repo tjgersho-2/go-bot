@@ -6,16 +6,17 @@ import ForgeReconciler, {
     Em,
     Heading,
     useProductContext,
-    Stack,
     Box,
     ButtonGroup,
     SectionMessage,
     Form,
+    Inline,
     Label,
     Strong,
     Link,
     TextArea,
     Textfield,
+    Tooltip,
     Modal,
     ModalTransition
  } from '@forge/react';
@@ -46,6 +47,7 @@ const App = () => {
     const [usageResetsAt, setUsageResetsAt] = useState("");
     const [attachmentFilename, setAttachmentFilename] = useState(null);
     const [keyValid, setKeyValid] = useState(false);
+    const [skipped, setSkipped] = useState(false);
 
     const POLL_INTERVAL = 3000; // Poll every 2 seconds
 
@@ -394,6 +396,19 @@ const App = () => {
         await validateAccessKey(install, accessKey.trim().toUpperCase());
     };
 
+    const skipStepOne = async () => {
+      setSkipped(true)
+      setClarifiedData({
+        acceptanceCriteria: "",
+        edgeCases: "",
+        successMetrics: "",
+        testScenarios: "",
+        confidence: "",
+        processingTime: "",
+        applied: true 
+      });
+    };
+
     // Updated clarifyTicket function
     const clarifyTicket = async () => {
         if (!install) {
@@ -493,10 +508,12 @@ const App = () => {
             setCodeSaved(false);
             
             try {
-                const formattedDescription = formatClarifiedDescription(
-                    clarifiedData, 
-                    issueDetails?.description || ''
+                let formattedDescription = formatClarifiedDescription(
+                    clarifiedData
                 );
+                if (skipped){
+                  formattedDescription = issueDetails?.description;
+                }
                 
                 // Start the job (returns immediately)
                 const { jobId } = await invoke('startGenCode', { 
@@ -550,7 +567,7 @@ const App = () => {
         }
     };
 
- 
+    
   const saveCodeToTicket = async () => {
         if (!codeImplementation) return;
         
@@ -619,7 +636,7 @@ const App = () => {
 
       return (
         <Box>
-          {applied && !codeImplementation ? (
+          {applied && !codeImplementation && !skipped ? (
             <SectionMessage title="Success" appearance="confirmation">
               <Text> Changes have been applied to the ticket description. Next, have GoBot Code! </Text>
             </SectionMessage>
@@ -737,7 +754,7 @@ const App = () => {
                     >Save to Ticket</Button>
                  :<></> }
                   <Button 
-                    onClick={goBotCode}
+                    onClick={()=>{setCodeImplementation(null); setSkipped(true);}}
                   >GoBot Code Again</Button>
                   <Button onClick={resetAnalysis}>Reset</Button>
                 </ButtonGroup>
@@ -750,22 +767,29 @@ const App = () => {
                   <Text>
                     <Em>Step 2. Transform scope to an initial AI implementation.</Em>
                   </Text>
+                  <Inline  alignInline="start" grow="fill">
                   {showCustomPromptForm ? (
                     <Box>
-                      <Label labelFor="codeGenCustomPrompt">Custom Prompt:</Label>
-                      <TextArea 
-                          id="codeGenCustomPrompt"
-                          name="codeGenCustomPrompt"
-                          placeholder="e.g. Build with Python"
-                          value={codeGenCustomPrompt}
-                          onChange={(e) => {setCodeGenCustomPrompt(e.target.value)}}
-                      />
-                      <Button onClick={() => setShowCustomPromptForm(false)}>Clear</Button>
+                        <Label labelFor="codeGenCustomPrompt">Custom Prompt:</Label>
+                        <Inline grow="fill">
+                        <TextArea 
+                            id="codeGenCustomPrompt"
+                            name="codeGenCustomPrompt"
+                            placeholder="e.g. Build with Python"
+                            value={codeGenCustomPrompt}
+                            onChange={(e) => {setCodeGenCustomPrompt(e.target.value)}}
+                        />
+                        <Button onClick={() => {setShowCustomPromptForm(false); setCodeGenCustomPrompt(null);}}>Clear</Button>
+                      </Inline>
                     </Box>
                   ) : (
                     <Button onClick={() => setShowCustomPromptForm(true)}>Custom Prompt</Button>
                   )}
                   <Button onClick={goBotCode} appearance="primary">GoBot Code!</Button>
+                    <Inline  alignInline="center" grow="fill">
+                        <Button onClick={resetAnalysis}>Back &#8592;</Button>
+                    </Inline>
+                  </Inline>
                 </Box>
               );
             } else {
@@ -777,7 +801,7 @@ const App = () => {
                       appearance="primary"
                     >Apply to Ticket</Button>
                     <Button 
-                      onClick={()=>setCodeImplementation(null)}
+                      onClick={()=>resetAnalysis()}
                     >GoBot Again</Button>
                   </ButtonGroup>
                 );
@@ -787,22 +811,31 @@ const App = () => {
                     <Text>
                       <Em>Step 1. Transform tickets into crystal-clear scope.</Em>
                     </Text>
+                    <Inline  alignInline="start" grow="fill">
                     {showCustomPromptForm ? (
                       <Box>
                         <Label labelFor="clarifyCustomPrompt">Custom Prompt:</Label>
-                        <TextArea 
-                            id="clarifyCustomPrompt"
-                            name="clarifyCustomPrompt"
-                            placeholder="e.g. Focus on security requirements"
-                            value={clarifyCustomPrompt}
-                            onChange={(e) => {setClarifyCustomPrompt(e.target.value)}}
-                        />
-                        <Button onClick={() => setShowCustomPromptForm(false)}>Clear</Button>
+                        <Inline grow="fill">
+                          <TextArea 
+                              id="clarifyCustomPrompt"
+                              name="clarifyCustomPrompt"
+                              placeholder="e.g. Focus on security requirements"
+                              value={clarifyCustomPrompt}
+                              onChange={(e) => {setClarifyCustomPrompt(e.target.value)}}
+                          />
+                          <Button onClick={() => {setShowCustomPromptForm(false); setClarifyCustomPrompt(null);}}>Clear</Button>
+                        </Inline>
                       </Box>
                     ) : (
                       <Button onClick={() => setShowCustomPromptForm(true)}>Custom Prompt</Button>
                     )}
                     <Button onClick={clarifyTicket} appearance="primary">GoBot</Button>
+                      <Inline  alignInline="center" grow="fill">
+                        <Tooltip content="Skip clarification step, and use your jira title and description to Gen Code.">
+                          <Button onClick={skipStepOne}>Skip &#8594;</Button>
+                        </Tooltip>
+                      </Inline>
+                    </Inline>
                   </Box>
                 );
               }
@@ -874,7 +907,7 @@ const App = () => {
                 <Textfield 
                     name="accessKey"
                     label="Access Key"
-                    placeholder="JIRA-XXXX-XXXX-XXXX"
+                    placeholder="GOBOT-XXXX-XXXX-XXXX"
                     value={accessKey}
                     onChange={(e) => {setAccessKey(e.target.value)}}
                 />

@@ -339,7 +339,7 @@ Your License Key: {license_key}
 
 🚀 How to Activate (3 easy steps):
 
-1. Install GoBot in your Jira workspace
+1. Install GoBot in your Jira workspace <a href="https://developer.atlassian.com/console/install/9eb6c48c-0089-4802-ac61-aea3a449560f?signature=AYABeOg40uqC6UYcofhxrvJNm6cAAAADAAdhd3Mta21zAEthcm46YXdzOmttczp1cy13ZXN0LTI6NzA5NTg3ODM1MjQzOmtleS83MDVlZDY3MC1mNTdjLTQxYjUtOWY5Yi1lM2YyZGNjMTQ2ZTcAuAECAQB4IOp8r3eKNYw8z2v%2FEq3%2FfvrZguoGsXpNSaDveR%2FF%2Fo0BXCohExkzjSPPgCVMh8HihQAAAH4wfAYJKoZIhvcNAQcGoG8wbQIBADBoBgkqhkiG9w0BBwEwHgYJYIZIAWUDBAEuMBEEDO%2FIPQWIR2%2B85US6ZQIBEIA7ms9qr1AuOnDjx8Gzap%2Bk0W%2FNLmhUY4LNp5StGaWhBehhJM8gavG4qOEN5yrzPZVxOJUKtDRWcDN5hzsAB2F3cy1rbXMAS2Fybjphd3M6a21zOmV1LXdlc3QtMTo3MDk1ODc4MzUyNDM6a2V5LzQ2MzBjZTZiLTAwYzMtNGRlMi04NzdiLTYyN2UyMDYwZTVjYwC4AQICAHijmwVTMt6Oj3F%2B0%2B0cVrojrS8yZ9ktpdfDxqPMSIkvHAHrFvY6ClvsefAtxT3TBNSPAAAAfjB8BgkqhkiG9w0BBwagbzBtAgEAMGgGCSqGSIb3DQEHATAeBglghkgBZQMEAS4wEQQMAHBw7KzxgkjJxPYgAgEQgDve8Fmp5ylYZP1hOw%2BctC%2FWexQWPkV2kMrLonShs1ChxFkI46t%2BYv5rIG%2F%2FYNbchvvZ8Hylb37%2FHUeIuQAHYXdzLWttcwBLYXJuOmF3czprbXM6dXMtZWFzdC0xOjcwOTU4NzgzNTI0MzprZXkvNmMxMjBiYTAtNGNkNS00OTg1LWI4MmUtNDBhMDQ5NTJjYzU3ALgBAgIAeLKa7Dfn9BgbXaQmJGrkKztjV4vrreTkqr7wGwhqIYs5AaPkP%2F15wcKa1vZhbNXytakAAAB%2BMHwGCSqGSIb3DQEHBqBvMG0CAQAwaAYJKoZIhvcNAQcBMB4GCWCGSAFlAwQBLjARBAxfvwddkOH7ANVUhnECARCAOyFZyw37viPuJfWxorHvbPFOJHrx4iUs7ESsvAb%2BaMicAdsVGMZboWfcOsQjCNNNyM8sz1%2BxfURrAabtAgAAAAAMAAAQAAAAAAAAAAAAAAAAAMmcsmZL1qX0rjA%2BHbmOll3%2F%2F%2F%2F%2FAAAAAQAAAAAAAAAAAAAAAQAAADKhfFiJAHjrOsP6IXKzypA8upYMwSZ4Ii85HM3oi77j%2FK7I59VhL82THhTSmlDwvUDDl3aSvoVEgXKXCOgBOxPbUgA%3D&product=jira">GoBot</a>
 2. Open any Jira ticket
 3. Enter your license key in the GoBot panel
 
@@ -401,7 +401,8 @@ The GoBot Team
     <div style="background: #f8fafc; border-radius: 8px; padding: 20px; margin: 24px 0;">
         <h3 style="margin: 0 0 12px 0; color: #1e293b;">🚀 How to Activate</h3>
         <ol style="margin: 0; padding-left: 20px; color: #64748b;">
-            <li>Install GoBot in your Jira workspace</li>
+            <li>Install GoBot in your Jira workspace</li> <a href="https://developer.atlassian.com/console/install/9eb6c48c-0089-4802-ac61-aea3a449560f?signature=AYABeOg40uqC6UYcofhxrvJNm6cAAAADAAdhd3Mta21zAEthcm46YXdzOmttczp1cy13ZXN0LTI6NzA5NTg3ODM1MjQzOmtleS83MDVlZDY3MC1mNTdjLTQxYjUtOWY5Yi1lM2YyZGNjMTQ2ZTcAuAECAQB4IOp8r3eKNYw8z2v%2FEq3%2FfvrZguoGsXpNSaDveR%2FF%2Fo0BXCohExkzjSPPgCVMh8HihQAAAH4wfAYJKoZIhvcNAQcGoG8wbQIBADBoBgkqhkiG9w0BBwEwHgYJYIZIAWUDBAEuMBEEDO%2FIPQWIR2%2B85US6ZQIBEIA7ms9qr1AuOnDjx8Gzap%2Bk0W%2FNLmhUY4LNp5StGaWhBehhJM8gavG4qOEN5yrzPZVxOJUKtDRWcDN5hzsAB2F3cy1rbXMAS2Fybjphd3M6a21zOmV1LXdlc3QtMTo3MDk1ODc4MzUyNDM6a2V5LzQ2MzBjZTZiLTAwYzMtNGRlMi04NzdiLTYyN2UyMDYwZTVjYwC4AQICAHijmwVTMt6Oj3F%2B0%2B0cVrojrS8yZ9ktpdfDxqPMSIkvHAHrFvY6ClvsefAtxT3TBNSPAAAAfjB8BgkqhkiG9w0BBwagbzBtAgEAMGgGCSqGSIb3DQEHATAeBglghkgBZQMEAS4wEQQMAHBw7KzxgkjJxPYgAgEQgDve8Fmp5ylYZP1hOw%2BctC%2FWexQWPkV2kMrLonShs1ChxFkI46t%2BYv5rIG%2F%2FYNbchvvZ8Hylb37%2FHUeIuQAHYXdzLWttcwBLYXJuOmF3czprbXM6dXMtZWFzdC0xOjcwOTU4NzgzNTI0MzprZXkvNmMxMjBiYTAtNGNkNS00OTg1LWI4MmUtNDBhMDQ5NTJjYzU3ALgBAgIAeLKa7Dfn9BgbXaQmJGrkKztjV4vrreTkqr7wGwhqIYs5AaPkP%2F15wcKa1vZhbNXytakAAAB%2BMHwGCSqGSIb3DQEHBqBvMG0CAQAwaAYJKoZIhvcNAQcBMB4GCWCGSAFlAwQBLjARBAxfvwddkOH7ANVUhnECARCAOyFZyw37viPuJfWxorHvbPFOJHrx4iUs7ESsvAb%2BaMicAdsVGMZboWfcOsQjCNNNyM8sz1%2BxfURrAabtAgAAAAAMAAAQAAAAAAAAAAAAAAAAAMmcsmZL1qX0rjA%2BHbmOll3%2F%2F%2F%2F%2FAAAAAQAAAAAAAAAAAAAAAQAAADKhfFiJAHjrOsP6IXKzypA8upYMwSZ4Ii85HM3oi77j%2FK7I59VhL82THhTSmlDwvUDDl3aSvoVEgXKXCOgBOxPbUgA%3D&product=jira">GoBot</a>
+   
             <li>Open any Jira ticket</li>
             <li>Enter your license key in the GoBot panel</li>
         </ol>
