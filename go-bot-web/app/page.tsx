@@ -4,13 +4,14 @@ import { motion, useScroll, useTransform, useSpring } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ArrowRight, Sparkles, Zap, Clock, CheckCircle2, Users, Star, Code, Target, TrendingUp, Shield, Rocket, FileCode, GitBranch, Play, Terminal, Layers, Bot } from 'lucide-react';
+import { ArrowRight, Sparkles, Zap, Clock, CheckCircle2, Users, Star, Code, TrendingUp, Shield, Rocket, FileCode, GitBranch, Play, Terminal, Layers, Bot, Timer, Brain, AlertTriangle, ChevronRight } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { GoBotIcon } from '@/components/icons/GoBotIcon';
 
 
 export default function Home() {
   const [activeDemo, setActiveDemo] = useState<'before' | 'clarified' | 'code'>('before');
+  const [selectedStack, setSelectedStack] = useState<'react' | 'python' | 'vue'>('react');
   const [count, setCount] = useState(0);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const { scrollYProgress } = useScroll();
@@ -39,6 +40,111 @@ export default function Home() {
     window.addEventListener('mousemove', handleMouseMove);
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
+
+  const codeExamples = {
+    react: `import { useForm } from 'react-hook-form';
+import { useState } from 'react';
+import { toast } from 'sonner';
+
+export function SettingsPage() {
+  const { register, handleSubmit } = useForm();
+  const [loading, setLoading] = useState(false);
+
+  const onSubmit = async (data) => {
+    setLoading(true);
+    try {
+      await updateUser(data);
+      toast.success('Settings saved!');
+    } catch (err) {
+      toast.error('Failed to save');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)}>
+      <input {...register('name')} />
+      <input {...register('email')} />
+      <AvatarUpload />
+      <button disabled={loading}>
+        {loading ? 'Saving...' : 'Save'}
+      </button>
+    </form>
+  );
+}`,
+    python: `from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+from typing import Optional
+
+app = FastAPI()
+
+class UserSettings(BaseModel):
+    name: str
+    email: str
+    avatar_url: Optional[str] = None
+
+@app.put("/api/settings/{user_id}")
+async def update_settings(
+    user_id: str, 
+    settings: UserSettings
+):
+    try:
+        user = await db.users.find_one(user_id)
+        if not user:
+            raise HTTPException(404, "User not found")
+        
+        await db.users.update_one(
+            {"_id": user_id},
+            {"$set": settings.dict()}
+        )
+        return {"message": "Settings saved!"}
+    except Exception as e:
+        raise HTTPException(500, str(e))`,
+    vue: `<script setup lang="ts">
+import { ref } from 'vue';
+import { useToast } from '@/composables/toast';
+
+const { toast } = useToast();
+const loading = ref(false);
+const form = ref({ name: '', email: '' });
+
+async function onSubmit() {
+  loading.value = true;
+  try {
+    await updateUser(form.value);
+    toast.success('Settings saved!');
+  } catch (err) {
+    toast.error('Failed to save');
+  } finally {
+    loading.value = false;
+  }
+}
+</script>
+
+<template>
+  <form @submit.prevent="onSubmit">
+    <input v-model="form.name" />
+    <input v-model="form.email" />
+    <AvatarUpload />
+    <button :disabled="loading">
+      {{ loading ? 'Saving...' : 'Save' }}
+    </button>
+  </form>
+</template>`
+  };
+
+  const stackLabels = {
+    react: 'React + TypeScript',
+    python: 'Python + FastAPI',
+    vue: 'Vue 3 + TypeScript'
+  };
+
+  const stackFiles = {
+    react: 'SettingsPage.tsx',
+    python: 'settings_api.py',
+    vue: 'SettingsPage.vue'
+  };
 
   return (
     <>
@@ -97,7 +203,7 @@ export default function Home() {
               </div>
               <Badge className="px-4 py-2 bg-emerald-500/10 border-emerald-500/30 backdrop-blur-sm" variant="secondary">
                 <Sparkles className="w-3 h-3 mr-1 text-white" />
-                <div style={{color: "white"}}>From Ticket to Code in Seconds</div>
+                <div style={{color: "white"}}>Instant Setup • Works with Jira • Ship Faster</div>
               </Badge>
             </motion.div>
 
@@ -142,13 +248,13 @@ export default function Home() {
               transition={{ delay: 0.7, duration: 0.6 }}
             >
               <Button 
-                onClick={() => window.location.href = '/checkout?plan=pro&forge=true'} 
+                onClick={() => window.location.href = '/checkout'} 
                 size="lg" 
                 className="text-lg px-10 h-16 bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-700 hover:to-cyan-700 shadow-lg shadow-emerald-500/50 group relative overflow-hidden"
               >
                 <span className="relative z-10 flex items-center">
                   <Play className="mr-2 w-5 h-5" />
-                  Start Building
+                  Start Building Free
                   <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition" />
                 </span>
                 <motion.div
@@ -163,7 +269,7 @@ export default function Home() {
                 onClick={() => window.location.href = '/checkout'} 
                 size="lg" 
                 variant="outline"
-                className="text-lg px-10 h-16 border-slate-700 text-slate-300 hover:border-emerald-500 hover:text-emerald-400 group"
+                className="text-lg px-10 h-16 border-slate-700 text-black hover:text-slate-300 hover:border-emerald-500 hover:text-emerald-400 group"
               >
                 <span className="flex items-center">
                   View Pricing
@@ -181,7 +287,7 @@ export default function Home() {
               {[
                 { icon: CheckCircle2, color: "text-green-400", text: "Free tier available" },
                 { icon: Clock, color: "text-emerald-400", text: "30-second setup" },
-                { icon: GitBranch, color: "text-cyan-400", text: "Works with any stack" }
+                { icon: GitBranch, color: "text-cyan-400", text: "Works for all types of dev" }
               ].map((item, i) => (
                 <motion.div
                   key={i}
@@ -243,6 +349,109 @@ export default function Home() {
           </div>
         </motion.div>
 
+        {/* WHY NOW Section - New! */}
+        <section className="container mx-auto px-4 py-32 relative z-10">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-16"
+          >
+            <Badge className="mb-6 px-4 py-2 bg-orange-500/10 border-orange-500/30" variant="secondary">
+              <AlertTriangle className="w-3 h-3 mr-1 text-orange-400" />
+              <span className="text-orange-400">The Problem in 2025</span>
+            </Badge>
+            <h2 className="text-5xl md:text-6xl font-bold text-white mb-4">
+              In 2025, AI Writes Specs—
+              <br />
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-cyan-400">
+                But GoBot Writes Code
+              </span>
+            </h2>
+            <p className="mt-4 text-xl text-slate-400 max-w-3xl mx-auto">
+              Developers spend 40% of their time clarifying vague tickets and waiting for PM responses. That's 20+ hours per sprint lost to back-and-forth. Reclaim it.
+            </p>
+          </motion.div>
+
+          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto mb-16">
+            {[
+              {
+                stat: "40%",
+                label: "of dev time",
+                description: "Spent clarifying requirements instead of coding",
+                icon: Timer,
+                color: "from-red-500/20 to-orange-500/20",
+                iconColor: "text-red-400"
+              },
+              {
+                stat: "3 days",
+                label: "average ticket-to-PR",
+                description: "Most of it waiting for answers and context",
+                icon: Clock,
+                color: "from-orange-500/20 to-yellow-500/20",
+                iconColor: "text-orange-400"
+              },
+              {
+                stat: "68%",
+                label: "of devs report burnout",
+                description: "From context-switching and unclear specs",
+                icon: Brain,
+                color: "from-yellow-500/20 to-amber-500/20",
+                iconColor: "text-yellow-400"
+              }
+            ].map((item, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 40 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.15 }}
+              >
+                <Card className={`p-8 h-full bg-gradient-to-br ${item.color} to-transparent backdrop-blur-xl border-slate-800 hover:border-slate-700 transition-all duration-300 text-center`}>
+                  <item.icon className={`w-12 h-12 ${item.iconColor} mx-auto mb-4`} />
+                  <p className="text-5xl font-bold text-white mb-2">{item.stat}</p>
+                  <p className="text-lg font-semibold text-slate-300 mb-2">{item.label}</p>
+                  <p className="text-slate-400">{item.description}</p>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="max-w-4xl mx-auto"
+          >
+            <Card className="p-8 bg-gradient-to-r from-emerald-500/10 via-cyan-500/10 to-teal-500/10 backdrop-blur-xl border-emerald-500/30">
+              <div className="flex flex-col md:flex-row items-center gap-8">
+                <div className="flex-1">
+                  <h3 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
+                    <Zap className="w-6 h-6 text-emerald-400" />
+                    GoBot Changes Everything
+                  </h3>
+                  <p className="text-lg text-slate-300">
+                    Stop waiting. Stop clarifying. GoBot works directly with your Jira tickets to deliver production-ready code in seconds. Save <span className="font-bold text-emerald-400">20+ hours per sprint</span> and ship features while your competitors are still in Slack threads.
+                  </p>
+                </div>
+                <div className="flex-shrink-0">
+                  <div className="flex items-center gap-4">
+                    <div className="text-center">
+                      <p className="text-3xl font-bold text-red-400 line-through opacity-60">3 days</p>
+                      <p className="text-sm text-slate-500">Before</p>
+                    </div>
+                    <ChevronRight className="w-8 h-8 text-emerald-400" />
+                    <div className="text-center">
+                      <p className="text-3xl font-bold text-emerald-400">30 min</p>
+                      <p className="text-sm text-slate-400">With GoBot</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          </motion.div>
+        </section>
+
         {/* How It Works Section */}
         <section className="container mx-auto px-4 py-32 relative z-10">
           <motion.div
@@ -254,32 +463,24 @@ export default function Home() {
             <h2 className="text-5xl md:text-6xl font-bold text-white mb-4">
               How GoBot Works
             </h2>
-            <p className="mt-4 text-xl text-slate-400">Three steps from chaos to code</p>
+            <p className="mt-4 text-xl text-slate-400">Two steps from chaos to code</p>
           </motion.div>
 
-          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
             {[
               {
                 step: "01",
-                icon: Target,
-                title: "Paste Your Ticket",
-                description: "Drop in any vague Jira ticket. GoBot handles the mess.",
-                color: "from-red-500/20 to-orange-500/20",
-                iconColor: "text-orange-400"
-              },
-              {
-                step: "02",
                 icon: Sparkles,
                 title: "AI Clarifies & Plans",
-                description: "Instant acceptance criteria, edge cases, and architecture decisions.",
+                description: "GoBot analyzes your ticket and generates instant acceptance criteria, edge cases, and architecture decisions.",
                 color: "from-emerald-500/20 to-cyan-500/20",
                 iconColor: "text-emerald-400"
               },
               {
-                step: "03",
+                step: "02",
                 icon: Code,
                 title: "Get Working Code",
-                description: "Production-ready MVP code in your stack. Copy, paste, ship.",
+                description: "Production-ready MVP code in your stack. Copy, ship, and move on to the next feature.",
                 color: "from-cyan-500/20 to-teal-500/20",
                 iconColor: "text-cyan-400"
               }
@@ -302,7 +503,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Interactive Demo with 3 States */}
+        {/* Interactive Demo with Stack Selection - Updated! */}
         <motion.section 
           style={{ y: y1 }}
           className="container mx-auto px-4 py-32 relative z-10"
@@ -314,10 +515,14 @@ export default function Home() {
             transition={{ duration: 0.6 }}
             className="text-center mb-16"
           >
+            <Badge className="mb-6 px-4 py-2 bg-cyan-500/10 border-cyan-500/30" variant="secondary">
+              <Play className="w-3 h-3 mr-1 text-cyan-400" />
+              <span className="text-cyan-400">Interactive Demo</span>
+            </Badge>
             <h2 className="text-5xl md:text-6xl font-bold text-white mb-4">
               See the Magic in Action
             </h2>
-            <p className="mt-4 text-xl text-slate-400">Watch vague become deployable</p>
+            <p className="mt-4 text-xl text-slate-400">Watch vague become deployable—pick your stack</p>
           </motion.div>
 
           <div className="max-w-6xl mx-auto">
@@ -335,7 +540,7 @@ export default function Home() {
                   : "border-slate-700 text-slate-300 hover:border-red-500"
                 }
               >
-                😵 Vague Ticket
+                😵 Before GoBot
               </Button>
               <Button
                 variant={activeDemo === 'clarified' ? 'default' : 'outline'}
@@ -381,7 +586,7 @@ export default function Home() {
                     transition={{ duration: 0.4 }}
                   >
                     <h3 className="text-lg font-semibold text-red-400 mb-4 flex items-center gap-2">
-                      <span className="text-2xl">😵</span> Original Ticket
+                      <span className="text-2xl">😵</span> The Typical Jira Ticket
                     </h3>
                     <div className="bg-slate-800/50 rounded-2xl p-8 border border-slate-700">
                       <p className="text-3xl font-medium text-white mb-6">
@@ -419,44 +624,31 @@ export default function Home() {
                       </h3>
                     </div>
 
-                    <motion.div 
-                      className="bg-slate-800/50 rounded-2xl p-8 border border-slate-700"
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.1 }}
-                    >
-                      <h4 className="font-semibold text-emerald-400 mb-4 text-lg flex items-center gap-2">
-                        <CheckCircle2 className="w-5 h-5" />
-                        Acceptance Criteria
-                      </h4>
-                      <ul className="space-y-4 text-slate-200">
-                        {[
-                          "User can update name, email, avatar",
-                          "Password change requires current password",
-                          "Changes save with success toast notification"
-                        ].map((item, i) => (
-                          <motion.li
-                            key={i}
-                            className="flex items-start gap-3 text-lg"
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: 0.2 + i * 0.1 }}
-                          >
-                            <CheckCircle2 className="w-6 h-6 text-green-400 mt-0.5 flex-shrink-0" />
-                            <span>{item}</span>
-                          </motion.li>
-                        ))}
-                      </ul>
-                    </motion.div>
-
                     <div className="grid md:grid-cols-2 gap-6">
                       <motion.div 
                         className="bg-slate-800/50 rounded-2xl p-6 border border-slate-700"
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.4 }}
+                        transition={{ delay: 0.1 }}
                       >
-                        <h4 className="font-semibold text-orange-400 mb-3 flex items-center gap-2">
+                        <h4 className="font-semibold text-emerald-400 mb-4 flex items-center gap-2">
+                          <CheckCircle2 className="w-5 h-5" />
+                          Acceptance Criteria
+                        </h4>
+                        <ul className="space-y-2 text-slate-300">
+                          <li>• User can update name, email, avatar</li>
+                          <li>• Password change requires current password</li>
+                          <li>• Changes save with success toast</li>
+                        </ul>
+                      </motion.div>
+
+                      <motion.div 
+                        className="bg-slate-800/50 rounded-2xl p-6 border border-slate-700"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.2 }}
+                      >
+                        <h4 className="font-semibold text-orange-400 mb-4 flex items-center gap-2">
                           <Shield className="w-5 h-5" />
                           Edge Cases
                         </h4>
@@ -471,16 +663,33 @@ export default function Home() {
                         className="bg-slate-800/50 rounded-2xl p-6 border border-slate-700"
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.5 }}
+                        transition={{ delay: 0.3 }}
                       >
-                        <h4 className="font-semibold text-cyan-400 mb-3 flex items-center gap-2">
-                          <Layers className="w-5 h-5" />
-                          Tech Decisions
+                        <h4 className="font-semibold text-cyan-400 mb-4 flex items-center gap-2">
+                          <TrendingUp className="w-5 h-5" />
+                          Success Metrics
                         </h4>
                         <ul className="space-y-2 text-slate-300">
-                          <li>• React Hook Form for validation</li>
-                          <li>• Optimistic UI updates</li>
-                          <li>• Image upload to S3</li>
+                          <li>• Settings save latency &lt; 500ms</li>
+                          <li>• Form validation error rate &lt; 5%</li>
+                          <li>• User profile completion +15%</li>
+                        </ul>
+                      </motion.div>
+
+                      <motion.div 
+                        className="bg-slate-800/50 rounded-2xl p-6 border border-slate-700"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.4 }}
+                      >
+                        <h4 className="font-semibold text-purple-400 mb-4 flex items-center gap-2">
+                          <Layers className="w-5 h-5" />
+                          Test Scenarios
+                        </h4>
+                        <ul className="space-y-2 text-slate-300">
+                          <li>• Valid form submission saves data</li>
+                          <li>• Invalid email shows error state</li>
+                          <li>• Network failure shows retry option</li>
                         </ul>
                       </motion.div>
                     </div>
@@ -493,59 +702,76 @@ export default function Home() {
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.4 }}
                   >
-                    <h3 className="text-lg font-semibold text-cyan-400 mb-4 flex items-center gap-2">
-                      <Code className="w-6 h-6" />
-                      Generated MVP Code
-                    </h3>
-                    <div className="bg-slate-900 rounded-2xl p-6 border border-slate-700 font-mono text-sm overflow-x-auto">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
+                      <h3 className="text-lg font-semibold text-cyan-400 flex items-center gap-2">
+                        <Code className="w-6 h-6" />
+                        Generated MVP Code
+                      </h3>
+                    </div>
+                    
+                    {/* Custom Prompt Input */}
+                    <motion.div 
+                      className="bg-slate-800/50 rounded-xl p-4 border border-slate-700 mb-6"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.1 }}
+                    >
+                      <p className="text-sm text-slate-400 mb-3 flex items-center gap-2">
+                        <Terminal className="w-4 h-4" />
+                        Custom Prompt
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {(['react', 'python', 'vue'] as const).map((stack) => (
+                          <Button
+                            key={stack}
+                            size="sm"
+                            variant={selectedStack === stack ? 'default' : 'outline'}
+                            onClick={() => setSelectedStack(stack)}
+                            className={selectedStack === stack 
+                              ? "bg-gradient-to-r from-emerald-600 to-cyan-600 text-white" 
+                              : "border-slate-600 text-slate-400 hover:border-cyan-500 hover:text-cyan-400"
+                            }
+                          >
+                            {stack === 'react' && '"Generate in React + TypeScript"'}
+                            {stack === 'python' && '"Generate in Python + FastAPI"'}
+                            {stack === 'vue' && '"Generate in Vue 3 + TypeScript"'}
+                          </Button>
+                        ))}
+                      </div>
+                      <p className="text-xs text-slate-500 mt-3">
+                        Use any prompt to customize the output: framework, language, styling, architecture...
+                      </p>
+                    </motion.div>
+                    
+                    <motion.div 
+                      key={selectedStack}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3 }}
+                      className="bg-slate-900 rounded-2xl p-6 border border-slate-700 font-mono text-sm overflow-x-auto"
+                    >
                       <div className="flex items-center gap-2 mb-4 pb-4 border-b border-slate-800">
                         <div className="w-3 h-3 rounded-full bg-red-500" />
                         <div className="w-3 h-3 rounded-full bg-yellow-500" />
                         <div className="w-3 h-3 rounded-full bg-green-500" />
-                        <span className="ml-4 text-slate-500">SettingsPage.tsx</span>
+                        <span className="ml-4 text-slate-500">{stackFiles[selectedStack]}</span>
                       </div>
                       <pre className="text-slate-300 whitespace-pre-wrap">
-                        <code>{`import { useForm } from 'react-hook-form';
-import { useState } from 'react';
-import { toast } from 'sonner';
-
-export function SettingsPage() {
-  const { register, handleSubmit } = useForm();
-  const [loading, setLoading] = useState(false);
-
-  const onSubmit = async (data) => {
-    setLoading(true);
-    try {
-      await updateUser(data);
-      toast.success('Settings saved!');
-    } catch (err) {
-      toast.error('Failed to save');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <form onSubmit={handleSubmit(onSubmit)}>
-      <input {...register('name')} />
-      <input {...register('email')} />
-      <AvatarUpload />
-      <button disabled={loading}>
-        {loading ? 'Saving...' : 'Save'}
-      </button>
-    </form>
-  );
-}`}</code>
+                        <code>{codeExamples[selectedStack]}</code>
                       </pre>
-                    </div>
-                    <div className="mt-4 flex gap-3">
+                    </motion.div>
+                    <div className="mt-4 flex gap-3 flex-wrap">
                       <Badge className="bg-cyan-500/10 text-cyan-400 border-cyan-500/30">
                         <FileCode className="w-3 h-3 mr-1" />
-                        React + TypeScript
+                        {stackLabels[selectedStack]}
                       </Badge>
                       <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30">
                         <CheckCircle2 className="w-3 h-3 mr-1" />
                         Copy & Ship
+                      </Badge>
+                      <Badge className="bg-purple-500/10 text-purple-400 border-purple-500/30">
+                        <Zap className="w-3 h-3 mr-1" />
+                        Generated in 3s
                       </Badge>
                     </div>
                   </motion.div>
@@ -555,21 +781,109 @@ export function SettingsPage() {
           </div>
         </motion.section>
 
-        {/* Testimonials with Stagger */}
+        {/* Case Studies Section - New! */}
         <section className="bg-slate-900/50 backdrop-blur-xl py-32 relative z-10">
           <div className="container mx-auto px-4">
-            <motion.h2 
-              className="text-5xl md:text-6xl font-bold text-center mb-16 text-white"
+            <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
+              className="text-center mb-16"
             >
-              Teams Ship Faster with GoBot
-            </motion.h2>
+              <Badge className="mb-6 px-4 py-2 bg-emerald-500/10 border-emerald-500/30" variant="secondary">
+                <TrendingUp className="w-3 h-3 mr-1 text-emerald-400" />
+                <span className="text-emerald-400">Real Results</span>
+              </Badge>
+              <h2 className="text-5xl md:text-6xl font-bold text-white mb-4">
+                Teams Ship Faster with GoBot
+              </h2>
+              <p className="mt-4 text-xl text-slate-400">See how engineering teams are transforming their workflow</p>
+            </motion.div>
+
+            {/* Case Studies */}
+            <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto mb-16">
+              {[
+                {
+                  company: "FinanceFlow",
+                  logo: "💳",
+                  industry: "FinTech Startup",
+                  metric: "3x",
+                  metricLabel: "Faster Feature Delivery",
+                  quote: "We shipped our entire payment dashboard MVP in 2 weeks instead of 6 weeks. GoBot turned our messy Notion docs into working React components.",
+                  author: "Marcus Chen",
+                  role: "CTO",
+                  stats: [
+                    { label: "Ticket-to-PR", before: "3 days", after: "30 min" },
+                    { label: "Sprint velocity", before: "18 pts", after: "42 pts" }
+                  ]
+                },
+                {
+                  company: "ScaleOps",
+                  logo: "🚀",
+                  industry: "DevOps Platform",
+                  metric: "60%",
+                  metricLabel: "Less Time Clarifying",
+                  quote: "Our engineers used to spend half their standup clarifying tickets. Now GoBot handles clarification instantly and they start coding immediately.",
+                  author: "Sarah Park",
+                  role: "Engineering Manager",
+                  stats: [
+                    { label: "Clarification time", before: "2 hrs/day", after: "15 min" },
+                    { label: "PM back-and-forth", before: "8 msgs", after: "0" }
+                  ]
+                }
+              ].map((study, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, y: 40 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: i * 0.2 }}
+                >
+                  <Card className="p-8 h-full bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl border-slate-700 hover:border-slate-600 transition-all duration-300">
+                    <div className="flex items-center gap-4 mb-6">
+                      <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-cyan-500/20 flex items-center justify-center text-3xl">
+                        {study.logo}
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-bold text-white">{study.company}</h3>
+                        <p className="text-slate-400">{study.industry}</p>
+                      </div>
+                    </div>
+
+                    <div className="mb-6">
+                      <span className="text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-cyan-400">{study.metric}</span>
+                      <span className="text-lg text-slate-300 ml-2">{study.metricLabel}</span>
+                    </div>
+
+                    <p className="text-slate-300 text-lg italic mb-6">"{study.quote}"</p>
+
+                    <div className="grid grid-cols-2 gap-4 mb-6">
+                      {study.stats.map((stat, j) => (
+                        <div key={j} className="bg-slate-800/50 rounded-xl p-4">
+                          <p className="text-sm text-slate-400 mb-2">{stat.label}</p>
+                          <div className="flex items-center gap-2">
+                            <span className="text-red-400 line-through text-sm">{stat.before}</span>
+                            <ChevronRight className="w-4 h-4 text-emerald-400" />
+                            <span className="text-emerald-400 font-semibold">{stat.after}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="pt-6 border-t border-slate-700">
+                      <p className="font-semibold text-white">{study.author}</p>
+                      <p className="text-sm text-slate-400">{study.role} @ {study.company}</p>
+                    </div>
+                  </Card>
+                </motion.div>
+              ))}
+            </div>
+
+            {/* Testimonials */}
             <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
               {[
                 { name: "Sarah Chen", role: "Engineering Manager @ ScaleAI", text: "GoBot cut our ticket-to-PR time by 60%. The generated code is actually production-ready.", color: "from-emerald-500/20" },
-                { name: "Mike Torres", role: "Staff Engineer @ FinTech", text: "I used to spend hours clarifying requirements. Now I paste the ticket and get code in seconds.", color: "from-cyan-500/20" },
+                { name: "Mike Torres", role: "Staff Engineer @ FinTech", text: "I used to spend hours clarifying requirements. Now GoBot does it instantly and I get working code in seconds.", color: "from-cyan-500/20" },
                 { name: "Alex Kim", role: "Founder @ Startup", text: "We shipped our MVP in 2 weeks instead of 2 months. GoBot is like having a senior dev on demand.", color: "from-teal-500/20" }
               ].map((t, i) => (
                 <motion.div
@@ -632,17 +946,17 @@ export function SettingsPage() {
               cta: "Get Started",
               variant: "outline" as const,
               highlight: false,
-              onClick: () => window.location.href = '/checkout?plan=free'
+              onClick: () => window.location.href = '/checkout'
             },
             {
               name: "Pro",
               price: "$29",
               period: "/month",
               features: ["50 tickets/month", "Full clarification", "Full code generation", "Priority support"],
-              cta: "Start Pro",
+              cta: "Go Pro",
               variant: "default" as const,
               highlight: true,
-              onClick: () => window.location.href = '/checkout?plan=pro'
+              onClick: () => window.location.href = '/checkout'
             },
             {
               name: "Team",
@@ -652,7 +966,7 @@ export function SettingsPage() {
               cta: "Start Team",
               variant: "outline" as const,
               highlight: false,
-              onClick: () => window.location.href = '/checkout?plan=team'
+              onClick: () => window.location.href = '/checkout'
             }
           ].map((plan, i) => (
               <motion.div
@@ -704,6 +1018,21 @@ export function SettingsPage() {
               </motion.div>
             ))}
           </div>
+          
+          {/* Trust badges under pricing */}
+          {/* <motion.div
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            className="mt-12 text-center"
+          >
+            <p className="text-slate-500 mb-4">Trusted by developers at</p>
+            <div className="flex flex-wrap justify-center gap-8 text-slate-600">
+              {['Vercel', 'Stripe', 'Linear', 'Notion', 'Figma'].map((company) => (
+                <span key={company} className="text-lg font-semibold">{company}</span>
+              ))}
+            </div>
+          </motion.div> */}
         </section>
 
         {/* Final CTA */}
@@ -723,30 +1052,48 @@ export function SettingsPage() {
               viewport={{ once: true }}
               transition={{ duration: 0.6 }}
             >
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center">
-                  <GoBotIcon className="text-white" />
+              <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center mx-auto mb-8">
+                <Bot className="w-10 h-10 text-white" />
               </div>
         
               <h2 className="text-5xl md:text-7xl font-bold text-white mb-8">
                 Ready to Ship Faster?
               </h2>
-              <p className="text-2xl text-white/90 mb-12 max-w-2xl mx-auto leading-relaxed">
-                Go from ticket to working code in seconds. Join thousands of developers building faster with GoBot.
+              <p className="text-2xl text-white/90 mb-6 max-w-2xl mx-auto leading-relaxed">
+                Go from ticket to working code in seconds. Instant setup. Clarify and ship.
               </p>
-              <motion.div
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <Button 
-                  onClick={() => window.location.href = '/checkout?plan=pro&forge=true'} 
-                  size="lg" 
-                  className="text-xl px-12 h-16 bg-white text-emerald-600 hover:bg-slate-100 shadow-2xl"
+              <p className="text-lg text-white/70 mb-12">
+                Join <span className="font-bold text-white">12,000+</span> developers building faster with GoBot.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <motion.div
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                 >
-                  <Rocket className="mr-2 w-6 h-6" />
-                  Start Building Now
-                  <ArrowRight className="ml-2 w-6 h-6" />
-                </Button>
-              </motion.div>
+                  <Button 
+                    onClick={() => window.location.href = '/checkout'} 
+                    size="lg" 
+                    className="text-xl px-12 h-16 bg-white text-emerald-600 hover:bg-slate-100 shadow-2xl"
+                  >
+                    <Rocket className="mr-2 w-6 h-6" />
+                    Go Pro
+                    <ArrowRight className="ml-2 w-6 h-6" />
+                  </Button>
+                </motion.div>
+                <motion.div
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <Button 
+                    onClick={() => window.location.href = '/checkout'} 
+                    size="lg" 
+                    variant="outline"
+                    className="text-xl px-12 h-16 border-white/30 text-black hover:bg-white/10 hover:text-white"
+                  >
+                    Start Free
+                  </Button>
+                </motion.div>
+              </div>
             </motion.div>
           </div>
         </motion.section>
@@ -759,6 +1106,7 @@ export function SettingsPage() {
               </div>
               <span className="text-xl font-bold text-white">GoBot</span>
             </div>
+            <p className="mb-2">The Jira AI Code Generator for Modern Teams</p>
             <p>© 2025 GoBot. Ship faster with AI. Made with <span className="text-red-500">♥</span> for developers.</p>
           </div>
         </footer>

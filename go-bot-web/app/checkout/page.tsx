@@ -441,18 +441,6 @@ export default function CheckoutPage() {
                     <td className="p-4 text-center"><CheckCircle2 className="w-5 h-5 text-emerald-400 mx-auto" /></td>
                     <td className="p-4 text-center"><CheckCircle2 className="w-5 h-5 text-emerald-400 mx-auto" /></td>
                   </tr>
-                  <tr>
-                    <td className="p-4 text-slate-300">All Frameworks</td>
-                    <td className="p-4 text-center"><CheckCircle2 className="w-5 h-5 text-emerald-400 mx-auto" /></td>
-                    <td className="p-4 text-center"><CheckCircle2 className="w-5 h-5 text-emerald-400 mx-auto" /></td>
-                    <td className="p-4 text-center"><CheckCircle2 className="w-5 h-5 text-emerald-400 mx-auto" /></td>
-                  </tr>
-                  <tr>
-                    <td className="p-4 text-slate-300">API Access</td>
-                    <td className="p-4 text-center text-slate-600">—</td>
-                    <td className="p-4 text-center text-slate-600">—</td>
-                    <td className="p-4 text-center"><CheckCircle2 className="w-5 h-5 text-emerald-400 mx-auto" /></td>
-                  </tr>
                 </tbody>
               </table>
             </div>

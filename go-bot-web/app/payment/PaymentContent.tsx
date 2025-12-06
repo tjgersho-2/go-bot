@@ -51,9 +51,6 @@ export default function PaymentContent() {
     try {
       setLoading(true);
       setError(null);
-      console.log("-------------------");
-      console.log(process.env);
-      console.log(`${process.env.NEXT_PUBLIC_GOBOT_URL}/create-payment-intent`)
       // Call FastAPI backend instead of Next.js API route
       const response = await fetch(`${process.env.NEXT_PUBLIC_GOBOT_URL}/create-payment-intent`, {
         method: 'POST',

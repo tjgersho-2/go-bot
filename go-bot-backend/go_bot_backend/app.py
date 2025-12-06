@@ -55,9 +55,9 @@ ENABLE_PAYMENTS = os.getenv("ENABLE_PAYMENTS", "false").lower() == "true"
 ENABLE_ANALYTICS = os.getenv("ENABLE_ANALYTICS", "true").lower() == "true"
 
 # Rate limiting config
-RATE_LIMIT_FREE = int(os.getenv("RATE_LIMIT_FREE", "5"))  # per month
-RATE_LIMIT_PRO = int(os.getenv("RATE_LIMIT_PRO", "999999"))  # unlimited
-RATE_LIMIT_WINDOW = int(os.getenv("RATE_LIMIT_WINDOW", "60"))  # seconds
+RATE_LIMIT_FREE = int(os.getenv("RATE_LIMIT_FREE", "10"))  # per month
+RATE_LIMIT_PRO = int(os.getenv("RATE_LIMIT_PRO", "100"))  # unlimited
+RATE_LIMIT_TEAM = int(os.getenv("RATE_LIMIT_TEAM", "400"))  # seconds
 
 # ============================================================================
 # Initialize Services
@@ -259,9 +259,9 @@ if DATABASE_URL:
 def get_plan_limits(plan_id: str) -> int:
     """Get clarification limit based on plan"""
     limits = {
-        'free': 5,
-        'pro': 50,
-        'team': 200
+        'free': int(RATE_LIMIT_FREE),
+        'pro': int(RATE_LIMIT_PRO),
+        'team': int(RATE_LIMIT_TEAM)
     }
     return limits.get(plan_id, 5)
 
@@ -1319,9 +1319,17 @@ async def validate_license_key(request: Request, key_input: AccessKeyInput):
         # Check if usage limit exceeded
         if key_data['gobot_used'] >= key_data['gobot_limit']:
             resets_at = key_data['usage_resets_at'].strftime('%B %d') if key_data['usage_resets_at'] else 'soon'
+            # Calculate remaining
+            remaining = key_data['gobot_limit'] - key_data['gobot_used']
+        
             return AccessKeyResponse(
-                valid=False,
-                message=f"Monthly limit of {key_data['gobot_limit']} reached. Resets on {resets_at}."
+                valid=True,
+                install=install,
+                plan=key_data['plan'],
+                gobotUsed=key_data['gobot_used'],
+                gobotLimit=key_data['gobot_limit'],
+                message=f"Monthly limit of {key_data['gobot_limit']} reached. Resets on {resets_at}.",
+                gobotsRemaining=remaining
             )
         
         # Deactivate any OLD keys for this install (user is switching to new key)
@@ -1363,7 +1371,7 @@ async def validate_license_key(request: Request, key_input: AccessKeyInput):
             gobotUsed=key_data['gobot_used'],
             gobotLimit=key_data['gobot_limit'],
             message="License key validated successfully!",
-            clarificationsRemaining=remaining
+            gobotsRemaining=remaining
         )
         
     except Exception as e:

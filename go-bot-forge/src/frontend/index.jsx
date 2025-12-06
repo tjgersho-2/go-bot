@@ -50,6 +50,7 @@ const App = () => {
     const [attachmentFilename, setAttachmentFilename] = useState(null);
     const [keyValid, setKeyValid] = useState(false);
     const [skipped, setSkipped] = useState(false);
+    const [disableGoBot, setDisableGoBot] = useState(false);
 
     const POLL_INTERVAL = 3000; // Poll every 2 seconds
 
@@ -360,6 +361,11 @@ const App = () => {
                 setPlan(result.plan);
                 setGobotLimit(result.gobotLimit);
                 setGobotUsed(result.gobotUsed);
+                if (result.gobotUsed >= result.gobotLimit){
+                  setDisableGoBot(true);
+                }else{
+                  setDisableGoBot(false);
+                }
                 setKeyModalOpen(false);
                 setError(null);
                 setKeyValid(true)
@@ -367,7 +373,8 @@ const App = () => {
             } else {
                 setKeyValid(false)
                 setError(result.message || 'Invalid access key');
-                setTimeout(()=>resetAnalysis(), 300);
+                setKeyModalOpen(false);
+                setTimeout(()=>resetAnalysis(), 3000);
                 return false;
             }
         } catch (err) {
@@ -587,6 +594,7 @@ const App = () => {
       setAnalyzing(false);
       setClarifyCustomPrompt(null);
       setCodeGenCustomPrompt(null);
+      setKeyModalOpen(false);
       setError(null);
       setCodeSaved(false);
       const issueId = context?.extension.issue.id;
@@ -779,7 +787,7 @@ const App = () => {
                   {!showCustomPromptForm && (
                     <Button onClick={() => setShowCustomPromptForm(true)}>Custom Prompt</Button>
                   )}
-                  <Button onClick={goBotCode} appearance="primary">GoBot Code!</Button>
+                  <Button onClick={goBotCode} appearance="primary" isDisabled={disableGoBot}>GoBot Code!</Button>
                     <Inline  alignInline="center" grow="fill">
                         <Button onClick={resetAnalysis}>Back &#8592;</Button>
                     </Inline>
@@ -824,7 +832,7 @@ const App = () => {
                     {!showCustomPromptForm && (
                       <Button onClick={() => setShowCustomPromptForm(true)}>Custom Prompt</Button>
                     )}
-                    <Button onClick={clarifyTicket} appearance="primary">GoBot</Button>
+                    <Button onClick={clarifyTicket} appearance="primary"  isDisabled={disableGoBot}>GoBot</Button>
                       <Inline  alignInline="center" grow="fill">
                         <Tooltip content="Skip clarification step, and use your jira title and description to Gen Code.">
                           <Button onClick={skipStepOne}>Skip &#8594;</Button>
