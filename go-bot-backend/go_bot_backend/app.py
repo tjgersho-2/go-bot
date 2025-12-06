@@ -425,7 +425,7 @@ The GoBot Team
     
     <p style="font-size: 12px; color: #94a3b8; text-align: center;">
         © 2025 GoBot. All rights reserved.<br>
-        <a href="https://gobot.dev" style="color: #10b981;">gobot.dev</a>
+        <a href="https://gobot.ai" style="color: #10b981;">gobot.ai</a>
     </p>
     
 </body>

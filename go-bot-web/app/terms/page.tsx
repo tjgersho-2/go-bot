@@ -56,7 +56,7 @@ export default function TermsPage() {
     },
     {
       title: '13. Contact',
-      content: `If you have any questions about these Terms, please contact us at legal@gobot.dev.`
+      content: `If you have any questions about these Terms, please contact us at gobot@gobot.ai.`
     }
   ];
 

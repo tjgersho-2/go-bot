@@ -29,7 +29,7 @@ export default function PrivacyPage() {
     {
       icon: Shield,
       title: '5. Your Rights',
-      content: `Depending on your location, you may have rights including: access to your personal data, correction of inaccurate data, deletion of your data, data portability, objection to certain processing, and withdrawal of consent. To exercise these rights, contact us at privacy@gobot.dev.`
+      content: `Depending on your location, you may have rights including: access to your personal data, correction of inaccurate data, deletion of your data, data portability, objection to certain processing, and withdrawal of consent. To exercise these rights, contact us at gobot@gobot.ai.`
     },
     {
       icon: Database,
@@ -54,7 +54,7 @@ export default function PrivacyPage() {
     {
       icon: Mail,
       title: '10. Contact Us',
-      content: `For privacy-related inquiries, contact our Data Protection Officer at privacy@gobot.dev or write to: GoBot Privacy Team, 123 Tech Street, San Francisco, CA 94105.`
+      content: `For privacy-related inquiries, contact our Data Protection Officer at gobot@gobot.ai or write to: GoBot Privacy Team, 123 Tech Street, San Francisco, CA 94105.`
     }
   ];
 
@@ -172,7 +172,7 @@ export default function PrivacyPage() {
           >
             <h3 className="text-lg font-semibold text-white mb-2">GDPR & CCPA Compliance</h3>
             <p className="text-slate-300 text-sm">
-              GoBot complies with GDPR (for EU users) and CCPA (for California residents). You have the right to access, correct, delete, and port your data. To make a request, email privacy@gobot.dev.
+              GoBot complies with GDPR (for EU users) and CCPA (for California residents). You have the right to access, correct, delete, and port your data. To make a request, email gobot@gobot.ai.
             </p>
           </motion.div>
 
