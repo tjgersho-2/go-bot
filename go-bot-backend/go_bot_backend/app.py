@@ -1536,7 +1536,8 @@ async def get_license_key_by_payment(payment_intent_id: str):
         
     finally:
         conn.close()
-  
+
+
 @app.post("/create-payment-intent")
 async def create_payment_intent(input: CreatePaymentIntentInput):
     """
@@ -1562,15 +1563,12 @@ async def create_payment_intent(input: CreatePaymentIntentInput):
         
         # Create a customer
         customer = stripe.Customer.create(
-            metadata={
-                'planId': plan_id,
-            }
+            metadata={'planId': plan_id}
         )
         
         print(f"✅ Created Stripe customer: {customer.id}")
         
-        # Create a subscription with incomplete status
-        # The invoice's PaymentIntent will be used for payment
+        # Create subscription
         subscription = stripe.Subscription.create(
             customer=customer.id,
             items=[{'price': price_id}],
@@ -1580,34 +1578,60 @@ async def create_payment_intent(input: CreatePaymentIntentInput):
                 'save_default_payment_method': 'on_subscription',
             },
             expand=['latest_invoice.payment_intent'],
-            metadata={
-                'planId': plan_id,
-            }
+            metadata={'planId': plan_id}
         )
         
         print(f"✅ Created subscription: {subscription.id}")
         print(f"📊 Subscription status: {subscription.status}")
         
-        # Get the invoice and its payment intent
+        # Get the invoice - might be expanded object or string ID
         invoice = subscription.latest_invoice
         
-        if not invoice:
-            raise HTTPException(status_code=500, detail="No invoice created for subscription")
+        print(f"📄 Invoice type: {type(invoice)}")
+        print(f"📄 Invoice: {invoice}")
+        
+        # If invoice is a string ID, we need to retrieve it
+        if isinstance(invoice, str):
+            print("⚠️  Invoice not expanded, retrieving...")
+            invoice = stripe.Invoice.retrieve(
+                invoice,
+                expand=['payment_intent']
+            )
         
         print(f"📄 Invoice ID: {invoice.id}")
         print(f"📊 Invoice status: {invoice.status}")
         
-        # The payment_intent should be on the invoice when using default_incomplete
+        # If invoice is draft, finalize it to create PaymentIntent
+        if invoice.status == 'draft':
+            print("📝 Invoice is draft, finalizing...")
+            invoice = stripe.Invoice.finalize_invoice(
+                invoice.id,
+                expand=['payment_intent']
+            )
+            print(f"📊 Invoice status after finalize: {invoice.status}")
+        
+        # Now get the payment_intent
         payment_intent = invoice.payment_intent
         
+        print(f"💳 PaymentIntent type: {type(payment_intent)}")
+        print(f"💳 PaymentIntent: {payment_intent}")
+        
+        # If payment_intent is a string ID, retrieve it
+        if isinstance(payment_intent, str):
+            print("⚠️  PaymentIntent not expanded, retrieving...")
+            payment_intent = stripe.PaymentIntent.retrieve(payment_intent)
+        
         if not payment_intent:
+            print("❌ Still no PaymentIntent!")
+            print(f"   Full invoice object: {invoice}")
             raise HTTPException(
-                status_code=500, 
-                detail="No PaymentIntent on invoice. Check Stripe dashboard for issues."
+                status_code=500,
+                detail="No PaymentIntent created. Check Stripe dashboard."
             )
         
         print(f"💳 PaymentIntent ID: {payment_intent.id}")
         print(f"💳 PaymentIntent status: {payment_intent.status}")
+        print(f"✅ Client secret ready")
         
         return {
             "clientSecret": payment_intent.client_secret,
@@ -1621,10 +1645,10 @@ async def create_payment_intent(input: CreatePaymentIntentInput):
         print(f"❌ Stripe error: {e}")
         raise HTTPException(status_code=500, detail=f"Stripe error: {str(e)}")
     except Exception as e:
-        print(f"❌ Error creating payment intent: {e}")
+        print(f"❌ Error: {e}")
         import traceback
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Failed to create payment intent: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 # ============================================================================
 # Error Handlers
