@@ -50,7 +50,7 @@ function SuccessContent() {
       if (!response.ok) {
         if (response.status === 404) {
           // Key might still be processing, retry after a delay
-          setTimeout(fetchLicenseKey, 2000);
+          setTimeout(fetchLicenseKey, 5000);
           return;
         }
         throw new Error('Failed to fetch license key');
