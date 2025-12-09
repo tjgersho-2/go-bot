@@ -215,7 +215,6 @@ def init_database():
                 -- Subscription fields
                 stripe_subscription_id VARCHAR(255),
                 stripe_customer_id VARCHAR(255),
-                stripe_session_id VARCHAR(255),
                 stripe_payment_intent_id VARCHAR(255),
                     
                 -- Usage tracking
@@ -239,7 +238,6 @@ def init_database():
         cur.execute("CREATE INDEX IF NOT EXISTS idx_license_email ON license_keys(customer_email)")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_license_subscription ON license_keys(stripe_subscription_id)")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_license_customer ON license_keys(stripe_customer_id)")
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_license_session ON license_keys(stripe_session_id)")
         
         conn.commit()
         print("✅ Database initialized")
@@ -1359,52 +1357,6 @@ async def validate_license_key(request: Request, key_input: AccessKeyInput):
         conn.close()
 
 
-@app.get("/license-key/session/{session_id}")
-async def get_license_key_by_session(session_id: str):
-    """
-    Get license key by Stripe session ID
-    Used by success page to display the key
-    """
-    conn = get_db_connection()
-    if not conn:
-        raise HTTPException(status_code=500, detail="Database unavailable")
-    
-    try:
-        cur = conn.cursor()
-        
-        cur.execute("""
-            SELECT 
-                key_code,
-                customer_email,
-                plan,
-                amount_paid,
-                created_at,
-                expires_at
-            FROM license_keys
-            WHERE stripe_session_id = %s
-        """, (session_id,))
-        
-        result = cur.fetchone()
-        
-        if not result:
-            raise HTTPException(
-                status_code=404, 
-                detail="License key not found. It may still be processing."
-            )
-        
-        return {
-            "keyCode": result['key_code'],
-            "email": result['customer_email'],
-            "plan": result['plan'],
-            "amountPaid": float(result['amount_paid']) if result['amount_paid'] else 0,
-            "createdAt": result['created_at'].isoformat() if result['created_at'] else None,
-            "expiresAt": result['expires_at'].isoformat() if result['expires_at'] else None
-        }
-        
-    finally:
-        conn.close()
-
-
 @app.get("/usage/{key_code}")
 async def get_key_usage(key_code: str):
     """
@@ -1508,41 +1460,6 @@ async def get_key_by_install(install: InstallData):
     finally:
         conn.close()
 
-
-@app.get("/license-key/{payment_intent_id}")
-async def get_license_key_by_payment(payment_intent_id: str):
-    """
-    Get license key by Stripe payment intent ID
-    Used by success page to display key
-    """
-    conn = get_db_connection()
-    if not conn:
-        raise HTTPException(status_code=500, detail="Database unavailable")
-    
-    try:
-        cur = conn.cursor()
-        
-        cur.execute("""
-            SELECT key_code, plan, created_at, expires_at, is_active
-            FROM license_keys
-            WHERE stripe_payment_intent_id = %s
-        """, (payment_intent_id,))
-        
-        result = cur.fetchone()
-        
-        if not result:
-            raise HTTPException(status_code=404, detail="License key not found")
-        
-        return {
-            "keyCode": result['key_code'],
-            "plan": result['plan'],
-            "createdAt": result['created_at'].isoformat() if result['created_at'] else None,
-            "expiresAt": result['expires_at'].isoformat() if result['expires_at'] else None,
-            "isActive": result['is_active']
-        }
-        
-    finally:
-        conn.close()
 
 
 @app.post("/create-payment-intent")
