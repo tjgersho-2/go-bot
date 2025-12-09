@@ -29,6 +29,10 @@ export default function RootLayout({
       >
         {children}
       </body>
+      <script type="text/javascript">
+        twq('event', 'tw-qvlpx-qvlvt', {
+        });
+      </script>
     </html>
   );
 }
