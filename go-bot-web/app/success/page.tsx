@@ -11,6 +11,7 @@ function SuccessContent() {
   const searchParams = useSearchParams();
   
   // Check for different flows
+  const sessionId = searchParams.get('session_id');
   const paymentIntentId = searchParams.get('payment_intent');
   const directKey = searchParams.get('key');
   const planParam = searchParams.get('plan');
@@ -31,7 +32,14 @@ function SuccessContent() {
       setLoading(false);
       return;
     }
-    
+     // Otherwise, fetch from payment intent (paid flow)
+    if (sessionId) {
+      fetchLicenseKeyBySession();
+    } else if (!directKey) {
+      setError('No payment information found');
+      setLoading(false);
+    }
+
     // Otherwise, fetch from payment intent (paid flow)
     if (paymentIntentId) {
       fetchLicenseKey();
@@ -39,7 +47,37 @@ function SuccessContent() {
       setError('No payment information found');
       setLoading(false);
     }
-  }, [paymentIntentId, directKey]);
+  }, [paymentIntentId, sessionId, directKey]);
+
+  const fetchLicenseKeyBySession = async () => {
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_GOBOT_URL}/license-key/session-id/${sessionId}`
+      );
+      
+      if (!response.ok) {
+        if (response.status === 404) {
+          // Key might still be processing, retry after a delay
+          setTimeout(fetchLicenseKey, 2000);
+          return;
+        }
+        throw new Error('Failed to fetch license key');
+      }
+
+      const data = await response.json();
+      
+      setLicenseKey(data.keyCode);
+      setCustomerEmail(data.email);
+      setPlan(data.plan.charAt(0).toUpperCase() + data.plan.slice(1));
+      setLoading(false);
+      
+    } catch (err: any) {
+      console.error('Error fetching license key:', err);
+      setError(err.message || 'Failed to load license key');
+      setLoading(false);
+    }
+  };
+
 
   const fetchLicenseKey = async () => {
     try {

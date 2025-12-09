@@ -9,6 +9,7 @@ import {
 } from '@stripe/react-stripe-js';
 import { Button } from '@/components/ui/button';
 import { Loader2, CheckCircle2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 interface CheckoutFormProps {
   planId: string;
@@ -18,6 +19,7 @@ interface CheckoutFormProps {
 export default function CheckoutForm({ planId, planName }: CheckoutFormProps) {
   const stripe = useStripe();
   const elements = useElements();
+  const router = useRouter();
 
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -46,10 +48,8 @@ export default function CheckoutForm({ planId, planName }: CheckoutFormProps) {
 
       if (error) {
         setErrorMessage(error.message || 'An unexpected error occurred.');
-        setIsLoading(false);
       } else if (paymentIntent && paymentIntent.status === 'succeeded') {
-        // Payment successful, redirect to success page
-        window.location.href = `/success?payment_intent=${paymentIntent.id}&plan=${planId}`;
+        router.push(`/success?payment_intent=${paymentIntent.id}&plan=${planId}`);
       }
     } catch (err: any) {
       console.error('Payment error:', err);

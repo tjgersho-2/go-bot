@@ -863,12 +863,9 @@ async def generate_code_endpoint(input: CodeGenInput):
         raise HTTPException(status_code=500, detail="Failed to generate code")
 
 
-
 @app.post("/webhook/stripe")
 async def stripe_webhook_handler(request: Request):
-    """
-    Handle Stripe webhook events for subscription payments
-    """
+    """Handle Stripe webhook events"""
     if not ENABLE_PAYMENTS or not STRIPE_WEBHOOK_SECRET:
         raise HTTPException(status_code=404, detail="Payments not enabled")
     
@@ -896,90 +893,131 @@ async def stripe_webhook_handler(request: Request):
         cur = conn.cursor()
         
         # ============================================
-        # invoice.payment_succeeded - PRIMARY EVENT FOR SUBSCRIPTIONS
+        # payment_intent.succeeded - Initial payment
         # ============================================
-        if event['type'] == 'invoice.payment_succeeded':
-            invoice = event['data']['object']
+        if event['type'] == 'payment_intent.succeeded':
+            payment_intent = event['data']['object']
             
+            metadata = payment_intent.get('metadata', {})
+            intent_type = metadata.get('type')
+            plan_id = metadata.get('planId')
+            
+            # Only handle subscription initial payments
+            if intent_type != 'subscription_initial':
+                print(f"ℹ️  Not a subscription payment, skipping")
+                return {"status": "success"}
+            
+            customer_id = payment_intent.get('customer')
+            payment_method_id = payment_intent.get('payment_method')
+            payment_intent_id = payment_intent.get('id')
+            
+            print(f"💳 Subscription payment succeeded:")
+            print(f"   PaymentIntent: {payment_intent_id}")
+            print(f"   Customer: {customer_id}")
+            print(f"   Plan: {plan_id}")
+            print(f"   Payment Method: {payment_method_id}")
+            
+            # Check if we already created a subscription for this payment
+            cur.execute("""
+                SELECT key_code FROM license_keys 
+                WHERE stripe_payment_intent_id = %s
+            """, (payment_intent_id,))
+            
+            existing = cur.fetchone()
+            if existing:
+                print(f"ℹ️  Already processed: {existing['key_code']}")
+                return {"status": "success", "keyCode": existing['key_code']}
+            
+            # Attach payment method to customer as default
+            stripe.Customer.modify(
+                customer_id,
+                invoice_settings={'default_payment_method': payment_method_id}
+            )
+            
+            print(f"✅ Attached payment method to customer")
+            
+            # Get price ID for subscription
+            price_ids = {
+                'pro': os.getenv('STRIPE_PRO_PRICE_ID'),
+                'team': os.getenv('STRIPE_TEAM_PRICE_ID')
+            }
+            price_id = price_ids.get(plan_id)
+            
+            if not price_id:
+                print(f"❌ No price ID for plan: {plan_id}")
+                raise Exception(f"No price ID for plan: {plan_id}")
+            
+            # Create the subscription (first invoice is already paid)
+            subscription = stripe.Subscription.create(
+                customer=customer_id,
+                items=[{'price': price_id}],
+                default_payment_method=payment_method_id,
+                metadata={'planId': plan_id},
+                # Bill immediately but don't charge (we already charged)
+                billing_cycle_anchor='now',
+                proration_behavior='none',
+                # Important: Don't charge again for first period
+                add_invoice_items=[{
+                    'price_data': {
+                        'currency': 'usd',
+                        'product': stripe.Price.retrieve(price_id).product,
+                        'unit_amount': -payment_intent.get('amount'),  # Credit the amount paid
+                    },
+                    'quantity': 1,
+                }]
+            )
+            
+            print(f"✅ Created subscription: {subscription.id}")
+            
+            # Get customer email
+            customer = stripe.Customer.retrieve(customer_id)
+            customer_email = customer.email or payment_intent.get('receipt_email') or "unknown@example.com"
+            
+            # Generate license key
+            license_key = generate_license_key()
+            gobot_limit = get_plan_limits(plan_id)
+            
+            # Insert license key
+            cur.execute("""
+                INSERT INTO license_keys 
+                (key_code, customer_email, plan, stripe_subscription_id, 
+                 stripe_customer_id, stripe_payment_intent_id, gobot_limit,
+                 gobot_used, usage_resets_at, subscription_status, is_active)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, 0, NOW() + INTERVAL '1 month', 'active', true)
+                RETURNING id
+            """, (
+                license_key,
+                customer_email,
+                plan_id,
+                subscription.id,
+                customer_id,
+                payment_intent_id,
+                gobot_limit
+            ))
+            
+            conn.commit()
+            print(f"🔑 License key generated: {license_key}")
+            
+            # Send email
+            send_license_key_email(customer_email, license_key, plan_id.capitalize(), gobot_limit)
+            print(f"📧 Email sent to {customer_email}")
+            
+            return {"status": "success", "keyCode": license_key}
+        
+        # ============================================
+        # invoice.payment_succeeded - Renewals
+        # ============================================
+        elif event['type'] == 'invoice.payment_succeeded':
+            invoice = event['data']['object']
             subscription_id = invoice.get('subscription')
-            customer_id = invoice.get('customer')
-            customer_email = invoice.get('customer_email')
-            payment_intent_id = invoice.get('payment_intent')
             billing_reason = invoice.get('billing_reason')
             
-            print(f"💳 Invoice payment succeeded:")
-            print(f"   Invoice ID: {invoice.get('id')}")
-            print(f"   Subscription: {subscription_id}")
-            print(f"   Customer: {customer_id}")
-            print(f"   Email: {customer_email}")
-            print(f"   Payment Intent: {payment_intent_id}")
-            print(f"   Billing Reason: {billing_reason}")
-            
             if not subscription_id:
-                print("ℹ️  Not a subscription invoice, skipping")
-                return {"status": "success", "message": "Not a subscription invoice"}
+                return {"status": "success"}
             
-            # Get subscription to find plan
-            subscription = stripe.Subscription.retrieve(subscription_id)
-            plan_id = subscription.metadata.get('planId', 'pro')
-            
-            print(f"   Plan: {plan_id}")
-            
-            # ========== NEW SUBSCRIPTION ==========
-            if billing_reason == 'subscription_create':
-                print(f"🆕 New subscription payment!")
-                
-                # Check if key already exists (idempotency)
-                cur.execute("""
-                    SELECT key_code FROM license_keys 
-                    WHERE stripe_subscription_id = %s
-                """, (subscription_id,))
-                
-                existing = cur.fetchone()
-                if existing:
-                    print(f"ℹ️  Key already exists: {existing['key_code']}")
-                    return {"status": "success", "keyCode": existing['key_code']}
-                
-                # Generate license key
-                license_key = generate_license_key()
-                gobot_limit = get_plan_limits(plan_id)
-                
-                # Get customer email if not on invoice
-                if not customer_email:
-                    customer = stripe.Customer.retrieve(customer_id)
-                    customer_email = customer.email or "unknown@example.com"
-                
-                # Insert license key
-                cur.execute("""
-                    INSERT INTO license_keys 
-                    (key_code, customer_email, plan, stripe_subscription_id, 
-                     stripe_customer_id, stripe_payment_intent_id, gobot_limit,
-                     gobot_used, usage_resets_at, subscription_status, is_active)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, 0, NOW() + INTERVAL '1 month', 'active', true)
-                    RETURNING id
-                """, (
-                    license_key,
-                    customer_email,
-                    plan_id,
-                    subscription_id,
-                    customer_id,
-                    payment_intent_id,
-                    gobot_limit
-                ))
-                
-                conn.commit()
-                print(f"🔑 License key generated: {license_key}")
-                print(f"📊 Limit: {gobot_limit} clarifications/month")
-                
-                # Send email
-                send_license_key_email(customer_email, license_key, plan_id.capitalize(), gobot_limit)
-                print(f"📧 Email sent to {customer_email}")
-                
-                return {"status": "success", "keyCode": license_key}
-            
-            # ========== RENEWAL PAYMENT ==========
-            elif billing_reason in ['subscription_cycle', 'subscription_update']:
-                print(f"🔄 Renewal payment for subscription: {subscription_id}")
+            # Only handle renewals
+            if billing_reason in ['subscription_cycle', 'subscription_update']:
+                print(f"🔄 Renewal for subscription: {subscription_id}")
                 
                 cur.execute("""
                     UPDATE license_keys
@@ -991,53 +1029,10 @@ async def stripe_webhook_handler(request: Request):
                 """, (subscription_id,))
                 
                 conn.commit()
-                print(f"✅ Usage reset for subscription: {subscription_id}")
-            
-            else:
-                print(f"ℹ️  Other billing reason: {billing_reason}")
+                print(f"✅ Usage reset")
         
         # ============================================
-        # invoice.payment_failed - Handle failed payments
-        # ============================================
-        elif event['type'] == 'invoice.payment_failed':
-            invoice = event['data']['object']
-            subscription_id = invoice.get('subscription')
-            
-            if subscription_id:
-                cur.execute("""
-                    UPDATE license_keys
-                    SET subscription_status = 'past_due',
-                        updated_at = NOW()
-                    WHERE stripe_subscription_id = %s
-                """, (subscription_id,))
-                
-                conn.commit()
-                print(f"⚠️  Payment failed for subscription: {subscription_id}")
-        
-        # ============================================
-        # customer.subscription.updated - Status changes
-        # ============================================
-        elif event['type'] == 'customer.subscription.updated':
-            subscription = event['data']['object']
-            subscription_id = subscription.get('id')
-            status = subscription.get('status')
-            
-            cur.execute("""
-                UPDATE license_keys
-                SET subscription_status = %s,
-                    is_active = CASE 
-                        WHEN %s IN ('active', 'trialing') THEN true 
-                        ELSE false 
-                    END,
-                    updated_at = NOW()
-                WHERE stripe_subscription_id = %s
-            """, (status, status, subscription_id))
-            
-            conn.commit()
-            print(f"📝 Subscription {subscription_id} status: {status}")
-        
-        # ============================================
-        # customer.subscription.deleted - Cancellation
+        # customer.subscription.deleted
         # ============================================
         elif event['type'] == 'customer.subscription.deleted':
             subscription = event['data']['object']
@@ -1055,8 +1050,24 @@ async def stripe_webhook_handler(request: Request):
             print(f"🔒 Subscription canceled: {subscription_id}")
         
         # ============================================
-        # Log other events
+        # customer.subscription.updated
         # ============================================
+        elif event['type'] == 'customer.subscription.updated':
+            subscription = event['data']['object']
+            subscription_id = subscription.get('id')
+            status = subscription.get('status')
+            
+            cur.execute("""
+                UPDATE license_keys
+                SET subscription_status = %s,
+                    is_active = %s IN ('active', 'trialing'),
+                    updated_at = NOW()
+                WHERE stripe_subscription_id = %s
+            """, (status, status, subscription_id))
+            
+            conn.commit()
+            print(f"📝 Subscription status: {status}")
+        
         else:
             print(f"ℹ️  {event['type']} - logged")
         
@@ -1071,6 +1082,7 @@ async def stripe_webhook_handler(request: Request):
     finally:
         conn.close()
 
+        
 
 @app.post("/create-free-key")
 async def create_free_key(input: CreateFreeKeyInput):
@@ -1541,7 +1553,8 @@ async def get_license_key_by_payment(payment_intent_id: str):
 @app.post("/create-payment-intent")
 async def create_payment_intent(input: CreatePaymentIntentInput):
     """
-    Create a Stripe subscription with PaymentIntent for embedded checkout
+    Create a PaymentIntent for subscription payment using Elements
+    Subscription is created after payment succeeds (in webhook)
     """
     if not ENABLE_PAYMENTS or not stripe.api_key:
         raise HTTPException(status_code=503, detail="Payments not available")
@@ -1549,99 +1562,54 @@ async def create_payment_intent(input: CreatePaymentIntentInput):
     try:
         plan_id = input.planId.lower()
         
-        price_ids = {
-            'pro': os.getenv('STRIPE_PRO_PRICE_ID'),
-            'team': os.getenv('STRIPE_TEAM_PRICE_ID')
+        # Define prices (in cents)
+        plan_config = {
+            'pro': {'amount': 2900, 'name': 'Pro'},      # $29
+            'team': {'amount': 9900, 'name': 'Team'}     # $99
         }
         
-        price_id = price_ids.get(plan_id)
-        if not price_id:
+        if plan_id not in plan_config:
             raise HTTPException(status_code=400, detail=f"Invalid plan: {plan_id}")
         
-        print(f"📝 Creating subscription for plan: {plan_id}")
-        print(f"💰 Using price ID: {price_id}")
+        config = plan_config[plan_id]
         
-        # Create a customer
+        print(f"📝 Creating PaymentIntent for plan: {plan_id}")
+        print(f"💰 Amount: ${config['amount'] / 100}")
+        
+        # Create a customer first
         customer = stripe.Customer.create(
             metadata={'planId': plan_id}
         )
         
-        print(f"✅ Created Stripe customer: {customer.id}")
+        print(f"✅ Created customer: {customer.id}")
         
-        # Create subscription
-        subscription = stripe.Subscription.create(
+        # Create PaymentIntent
+        payment_intent = stripe.PaymentIntent.create(
+            amount=config['amount'],
+            currency='usd',
             customer=customer.id,
-            items=[{'price': price_id}],
-            payment_behavior='default_incomplete',
-            payment_settings={
-                'payment_method_types': ['card'],
-                'save_default_payment_method': 'on_subscription',
+            setup_future_usage='off_session',  # Save card for future subscription payments
+            metadata={
+                'planId': plan_id,
+                'type': 'subscription_initial'
             },
-            expand=['latest_invoice.payment_intent'],
-            metadata={'planId': plan_id}
+            automatic_payment_methods={
+                'enabled': True,
+            },
         )
         
-        print(f"✅ Created subscription: {subscription.id}")
-        print(f"📊 Subscription status: {subscription.status}")
-        
-        # Get the invoice - might be expanded object or string ID
-        invoice = subscription.latest_invoice
-        
-        print(f"📄 Invoice type: {type(invoice)}")
-        print(f"📄 Invoice: {invoice}")
-        
-        # If invoice is a string ID, we need to retrieve it
-        if isinstance(invoice, str):
-            print("⚠️  Invoice not expanded, retrieving...")
-            invoice = stripe.Invoice.retrieve(
-                invoice,
-                expand=['payment_intent']
-            )
-        
-        print(f"📄 Invoice ID: {invoice.id}")
-        print(f"📊 Invoice status: {invoice.status}")
-        
-        # If invoice is draft, finalize it to create PaymentIntent
-        if invoice.status == 'draft':
-            print("📝 Invoice is draft, finalizing...")
-            invoice = stripe.Invoice.finalize_invoice(
-                invoice.id,
-                expand=['payment_intent']
-            )
-            print(f"📊 Invoice status after finalize: {invoice.status}")
-        
-        # Now get the payment_intent
-        payment_intent = invoice.payment_intent
-        
-        print(f"💳 PaymentIntent type: {type(payment_intent)}")
-        print(f"💳 PaymentIntent: {payment_intent}")
-        
-        # If payment_intent is a string ID, retrieve it
-        if isinstance(payment_intent, str):
-            print("⚠️  PaymentIntent not expanded, retrieving...")
-            payment_intent = stripe.PaymentIntent.retrieve(payment_intent)
-        
-        if not payment_intent:
-            print("❌ Still no PaymentIntent!")
-            print(f"   Full invoice object: {invoice}")
-            raise HTTPException(
-                status_code=500,
-                detail="No PaymentIntent created. Check Stripe dashboard."
-            )
-        
-        print(f"💳 PaymentIntent ID: {payment_intent.id}")
-        print(f"💳 PaymentIntent status: {payment_intent.status}")
-        print(f"✅ Client secret ready")
+        print(f"✅ Created PaymentIntent: {payment_intent.id}")
+        print(f"💳 Client secret ready")
         
         return {
             "clientSecret": payment_intent.client_secret,
-            "subscriptionId": subscription.id,
+            "paymentIntentId": payment_intent.id,
             "customerId": customer.id,
-            "invoiceId": invoice.id,
-            "paymentIntentId": payment_intent.id
+            "amount": config['amount'],
+            "planId": plan_id
         }
         
-    except stripe.error.StripeError as e:
+    except stripe.StripeError as e:
         print(f"❌ Stripe error: {e}")
         raise HTTPException(status_code=500, detail=f"Stripe error: {str(e)}")
     except Exception as e:
