@@ -1,6 +1,7 @@
 # main.py - FastAPI Backend for Go Bot
 import os
 import json
+import time
 import asyncio
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any, List
@@ -947,27 +948,21 @@ async def stripe_webhook_handler(request: Request):
                 print(f"❌ No price ID for plan: {plan_id}")
                 raise Exception(f"No price ID for plan: {plan_id}")
             
-            # Create the subscription (first invoice is already paid)
+            # Calculate trial end (30 days from now)
+            # This is their "paid" first month - subscription billing starts after
+            trial_end = int(time.time()) + (30 * 24 * 60 * 60)  # 30 days
+            
+            # Create subscription with trial (first month already paid via PaymentIntent)
             subscription = stripe.Subscription.create(
                 customer=customer_id,
                 items=[{'price': price_id}],
                 default_payment_method=payment_method_id,
                 metadata={'planId': plan_id},
-                # Bill immediately but don't charge (we already charged)
-                billing_cycle_anchor='now',
-                proration_behavior='none',
-                # Important: Don't charge again for first period
-                add_invoice_items=[{
-                    'price_data': {
-                        'currency': 'usd',
-                        'product': stripe.Price.retrieve(price_id).product,
-                        'unit_amount': -payment_intent.get('amount'),  # Credit the amount paid
-                    },
-                    'quantity': 1,
-                }]
+                trial_end=trial_end,  # First charge happens in 30 days
             )
             
             print(f"✅ Created subscription: {subscription.id}")
+            print(f"📅 Trial ends (first charge): {trial_end}")
             
             # Get customer email
             customer = stripe.Customer.retrieve(customer_id)
@@ -981,8 +976,8 @@ async def stripe_webhook_handler(request: Request):
             cur.execute("""
                 INSERT INTO license_keys 
                 (key_code, customer_email, plan, stripe_subscription_id, 
-                 stripe_customer_id, stripe_payment_intent_id, gobot_limit,
-                 gobot_used, usage_resets_at, subscription_status, is_active)
+                stripe_customer_id, stripe_payment_intent_id, gobot_limit,
+                gobot_used, usage_resets_at, subscription_status, is_active)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, 0, NOW() + INTERVAL '1 month', 'active', true)
                 RETURNING id
             """, (
@@ -1082,7 +1077,7 @@ async def stripe_webhook_handler(request: Request):
     finally:
         conn.close()
 
-        
+
 
 @app.post("/create-free-key")
 async def create_free_key(input: CreateFreeKeyInput):
